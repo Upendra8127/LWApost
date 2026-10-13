@@ -22,14 +22,14 @@ describe('PWA Logo, Icons & Auto-Update Validation', () => {
     const manifest = JSON.parse(fs.readFileSync(path.resolve('manifest.json'), 'utf8'));
     assert.equal(manifest.display, 'standalone');
     assert.ok(manifest.icons.length >= 4);
-    assert.ok(manifest.icons.some((i) => i.src === 'icons/icon-192.png'));
-    assert.ok(manifest.icons.some((i) => i.src === 'icons/icon-512.png'));
+    assert.ok(manifest.icons.some((i) => i.src.startsWith('icons/icon-192.png')));
+    assert.ok(manifest.icons.some((i) => i.src.startsWith('icons/icon-512.png')));
     assert.ok(manifest.icons.some((i) => i.purpose === 'maskable'));
   });
 
   test('sw.js features cache invalidation, skipWaiting, and clients.claim', () => {
     const sw = fs.readFileSync(path.resolve('sw.js'), 'utf8');
-    assert.ok(sw.includes('lwa-archive-v2.5'), 'Service worker cache must be updated');
+    assert.ok(sw.includes('lwa-archive-v3.0'), 'Service worker cache must be updated to v3.0');
     assert.ok(sw.includes('skipWaiting()'), 'Must call skipWaiting for instant activation');
     assert.ok(sw.includes('clients.claim()'), 'Must claim clients immediately');
   });

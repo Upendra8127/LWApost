@@ -814,15 +814,41 @@ function switchViewMode(mode) {
   }
 }
 
+// Helper to flatten posts into a continuous sequence of learning cards
+function buildDeckCards(posts) {
+  const list = [];
+  posts.forEach((post) => {
+    const postCards = post.cards && post.cards.length > 0
+      ? post.cards
+      : [{ cardIndex: 1, webpUrl: '', fallbackUrl: '' }];
+    postCards.forEach((c, idx) => {
+      list.push({
+        post,
+        cardIndex: idx,
+        card: c,
+        totalCards: postCards.length,
+      });
+    });
+  });
+  return list;
+}
+
 function initSwipeDeck(startPostIndex = 0) {
   const source = state.searchQuery || state.activeTab !== 'all' || state.dateFilter.presetDays > 0 || state.dateFilter.startDate
     ? state.filteredPosts
     : (state.filteredPosts.length > 0 ? state.filteredPosts : state.allPosts);
 
-  state.swipeDeck = [...source];
-  state.swipeDeckIndex = Math.min(Math.max(0, startPostIndex), Math.max(0, state.swipeDeck.length - 1));
-  state.swipeSubCardIndex = 0;
+  state.deckCards = buildDeckCards(source);
   state.swipeHistory = [];
+
+  if (startPostIndex > 0 && source[startPostIndex]) {
+    const targetOrderId = source[startPostIndex].order;
+    const matchIdx = state.deckCards.findIndex((item) => item.post.order === targetOrderId);
+    state.currentCardIndex = matchIdx >= 0 ? matchIdx : 0;
+  } else {
+    state.currentCardIndex = 0;
+  }
+
   renderDeckStack();
 }
 
@@ -830,62 +856,58 @@ function renderDeckStack() {
   if (!elements.cardStack) return;
   elements.cardStack.textContent = ''; // safe clear
 
-  const total = state.swipeDeck.length;
+  const total = (state.deckCards || []).length;
   if (total === 0) {
     if (elements.deckCompleted) {
       elements.deckCompleted.style.display = 'flex';
       const heading = elements.deckCompleted.querySelector('h2');
       if (heading) heading.textContent = state.searchQuery ? 'No matching cards' : 'All Caught Up!';
       const p = elements.deckCompleted.querySelector('p');
-      if (p) p.textContent = state.searchQuery ? `No posts or cards found matching "${state.searchQuery}".` : 'You have reviewed all the cards in this deck.';
+      if (p) p.textContent = state.searchQuery ? `No cards found matching "${state.searchQuery}".` : 'You have reviewed all the cards in this deck.';
     }
     return;
   }
 
   if (elements.deckCompleted) elements.deckCompleted.style.display = 'none';
 
-  // Modulo wrap-around so navigation never crashes
-  state.swipeDeckIndex = ((state.swipeDeckIndex % total) + total) % total;
+  // Continuous modulo wrap
+  state.currentCardIndex = ((state.currentCardIndex % total) + total) % total;
 
-  const currentIdx = state.swipeDeckIndex;
-  const currentPost = state.swipeDeck[currentIdx];
+  const currentIdx = state.currentCardIndex;
 
-  // Render 3 stacked cards with circular wrap
-  const stackCards = [
-    state.swipeDeck[currentIdx],
-    state.swipeDeck[(currentIdx + 1) % total],
-    state.swipeDeck[(currentIdx + 2) % total],
+  // Stack 3 cards in DOM (Top = 0, Next = 1, Third = 2)
+  const stackItems = [
+    state.deckCards[currentIdx],
+    state.deckCards[(currentIdx + 1) % total],
+    state.deckCards[(currentIdx + 2) % total],
   ];
 
-  for (let i = stackCards.length - 1; i >= 0; i--) {
-    const post = stackCards[i];
+  // Append reverse so top card is on top
+  for (let i = stackItems.length - 1; i >= 0; i--) {
+    const item = stackItems[i];
     const isTop = i === 0;
-    const cardEl = createSwipeCardElement(post, isTop, i);
+    const cardEl = createSwipeCardElement(item, isTop, i);
     elements.cardStack.appendChild(cardEl);
 
     if (isTop) {
-      bindCardDragPhysics(cardEl, post);
+      bindCardDragPhysics(cardEl, item);
     }
   }
 }
 
-function createSwipeCardElement(post, isTop, depthIndex) {
+function createSwipeCardElement(item, isTop, depthIndex) {
   const cardEl = document.createElement('div');
   cardEl.className = `swipe-card ${isTop ? 'is-top' : depthIndex === 1 ? 'is-next' : 'is-third'}`;
-  cardEl.dataset.postId = post.postId;
+  cardEl.dataset.postId = item.post.postId;
+  cardEl.dataset.cardIndex = item.cardIndex;
 
-  const cards = post.cards || [];
-  const numCards = cards.length;
-  const activeSubIndex = isTop ? state.swipeSubCardIndex : 0;
-  const currentCardData = cards[activeSubIndex] || cards[0];
-
-  // Story Indicator Progress Bars (Instagram / Tinder Carousel style)
-  if (numCards > 1) {
+  // Story Indicator Progress Bars (Instagram / Tinder style)
+  if (item.totalCards > 1) {
     const storyBars = document.createElement('div');
     storyBars.className = 'story-bars';
-    for (let c = 0; c < numCards; c++) {
+    for (let c = 0; c < item.totalCards; c++) {
       const bar = document.createElement('div');
-      bar.className = `story-bar ${c === activeSubIndex ? 'active' : ''}`;
+      bar.className = `story-bar ${c === item.cardIndex ? 'active' : ''}`;
       storyBars.appendChild(bar);
     }
     cardEl.appendChild(storyBars);
@@ -903,20 +925,20 @@ function createSwipeCardElement(post, isTop, depthIndex) {
   noteBtn.setAttribute('aria-label', 'Lesson Notes');
   noteBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    openDeckNotes(post);
+    openDeckNotes(item.post);
   });
   headerOverlay.appendChild(noteBtn);
 
   // Bookmark Star icon
   const starBtn = document.createElement('button');
-  starBtn.className = `card-star-btn ${state.bookmarks.has(post.postId) ? 'active' : ''}`;
+  starBtn.className = `card-star-btn ${state.bookmarks.has(item.post.postId) ? 'active' : ''}`;
   starBtn.textContent = '⭐';
   starBtn.title = 'Bookmark post';
   starBtn.setAttribute('aria-label', 'Bookmark');
   starBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleBookmark(post.postId);
-    starBtn.classList.toggle('active', state.bookmarks.has(post.postId));
+    toggleBookmark(item.post.postId);
+    starBtn.classList.toggle('active', state.bookmarks.has(item.post.postId));
     sounds.playChime();
   });
   headerOverlay.appendChild(starBtn);
@@ -927,11 +949,11 @@ function createSwipeCardElement(post, isTop, depthIndex) {
   imageBox.className = 'card-image-box';
 
   const img = document.createElement('img');
-  img.src = currentCardData ? currentCardData.webpUrl : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23334155"><rect width="100%" height="100%"/></svg>';
-  img.alt = `English card visual`;
+  img.src = item.card.webpUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23334155"><rect width="100%" height="100%"/></svg>';
+  img.alt = `Card visual`;
   img.loading = isTop ? 'eager' : 'lazy';
-  if (currentCardData && currentCardData.fallbackUrl) {
-    img.onerror = () => { img.src = currentCardData.fallbackUrl; };
+  if (item.card.fallbackUrl) {
+    img.onerror = () => { img.src = item.card.fallbackUrl; };
   }
   imageBox.appendChild(img);
   cardEl.appendChild(imageBox);
@@ -939,49 +961,45 @@ function createSwipeCardElement(post, isTop, depthIndex) {
   return cardEl;
 }
 
-// True Tinder / Bumble Gesture Physics with Pointer & Tap Detection
-function bindCardDragPhysics(cardEl, post) {
-  let isPointerDown = false;
+// True Tinder / Bumble Gesture Physics with Pointer & Touch Detection for PWA
+function bindCardDragPhysics(cardEl, item) {
   let isDragging = false;
+  let hasMoved = false;
   let startX = 0;
   let startY = 0;
   let currentX = 0;
   let currentY = 0;
 
+  // 1. Pointer Events (Desktop mouse & supported touch)
   const onPointerDown = (e) => {
     if (e.target.closest('button')) return;
-
-    isPointerDown = true;
-    isDragging = false;
+    isDragging = true;
+    hasMoved = false;
     startX = e.clientX;
     startY = e.clientY;
     currentX = startX;
     currentY = startY;
 
-    try {
-      cardEl.setPointerCapture(e.pointerId);
-    } catch (err) {}
+    try { cardEl.setPointerCapture(e.pointerId); } catch (err) {}
     cardEl.style.transition = 'none';
   };
 
   const onPointerMove = (e) => {
-    if (!isPointerDown) return;
-
+    if (!isDragging) return;
     currentX = e.clientX;
     currentY = e.clientY;
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
 
-    if (!isDragging && Math.hypot(deltaX, deltaY) > 7) {
-      isDragging = true;
+    if (!hasMoved && Math.hypot(deltaX, deltaY) > 6) {
+      hasMoved = true;
       cardEl.classList.add('is-dragging');
     }
 
-    if (isDragging) {
+    if (hasMoved) {
       const rotation = deltaX * 0.08;
       cardEl.style.transform = `translate3d(${deltaX}px, ${deltaY * 0.45}px, 0) rotate(${rotation}deg)`;
 
-      // Dynamic glowing stamps
       if (elements.stampLike && elements.stampPass) {
         if (deltaX > 20) {
           elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 60);
@@ -998,47 +1016,38 @@ function bindCardDragPhysics(cardEl, post) {
   };
 
   const onPointerUp = (e) => {
-    if (!isPointerDown) return;
-    isPointerDown = false;
+    if (!isDragging) return;
+    isDragging = false;
     cardEl.classList.remove('is-dragging');
 
-    try {
-      cardEl.releasePointerCapture(e.pointerId);
-    } catch (err) {}
-
-    // Reset stamp opacities
+    try { cardEl.releasePointerCapture(e.pointerId); } catch (err) {}
     if (elements.stampLike) elements.stampLike.style.opacity = 0;
     if (elements.stampPass) elements.stampPass.style.opacity = 0;
-    if (elements.stampNotes) elements.stampNotes.style.opacity = 0;
 
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
 
-    // TAP GESTURE DETECTION (If moved < 8px total)
-    if (!isDragging || Math.hypot(deltaX, deltaY) < 8) {
+    if (!hasMoved || Math.hypot(deltaX, deltaY) < 8) {
+      // Tap detection (clean, zero blue highlight)
       const rect = cardEl.getBoundingClientRect();
       const tapX = e.clientX - rect.left;
       if (tapX > rect.width * 0.5) {
-        // Tapped right half -> Advance to next card!
         goToNextCardInDeck('next');
       } else {
-        // Tapped left half -> Go back to previous card!
         goToPrevCardInDeck();
       }
       return;
     }
 
-    // DRAG SWIPE THRESHOLD (> 75px horizontal or swipe up)
-    if (deltaX > 75) {
+    if (deltaX > 70) {
       swipeFlyAndAdvance('like', cardEl, deltaX, deltaY);
-    } else if (deltaX < -75) {
+    } else if (deltaX < -70) {
       swipeFlyAndAdvance('pass', cardEl, deltaX, deltaY);
     } else if (deltaY < -90 && Math.abs(deltaX) < 55) {
-      openDeckNotes(post);
+      openDeckNotes(item.post);
       cardEl.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
     } else {
-      // Smooth elastic spring back to center
       cardEl.style.transition = 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
     }
@@ -1048,25 +1057,104 @@ function bindCardDragPhysics(cardEl, post) {
   cardEl.addEventListener('pointermove', onPointerMove);
   cardEl.addEventListener('pointerup', onPointerUp);
   cardEl.addEventListener('pointercancel', onPointerUp);
+
+  // 2. Direct Touch Events with preventDefault for mobile PWA standalone mode
+  const onTouchStart = (e) => {
+    if (e.target.closest('button')) return;
+    if (e.touches.length !== 1) return;
+    isDragging = true;
+    hasMoved = false;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    currentX = startX;
+    currentY = startY;
+    cardEl.style.transition = 'none';
+  };
+
+  const onTouchMove = (e) => {
+    if (!isDragging) return;
+    if (e.touches.length !== 1) return;
+    currentX = e.touches[0].clientX;
+    currentY = e.touches[0].clientY;
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+
+    if (!hasMoved && Math.hypot(deltaX, deltaY) > 6) {
+      hasMoved = true;
+      cardEl.classList.add('is-dragging');
+    }
+
+    if (hasMoved) {
+      // PREVENT SCROLL IN MOBILE PWA!
+      if (e.cancelable) e.preventDefault();
+      const rotation = deltaX * 0.08;
+      cardEl.style.transform = `translate3d(${deltaX}px, ${deltaY * 0.45}px, 0) rotate(${rotation}deg)`;
+
+      if (elements.stampLike && elements.stampPass) {
+        if (deltaX > 20) {
+          elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 60);
+          elements.stampPass.style.opacity = 0;
+        } else if (deltaX < -20) {
+          elements.stampPass.style.opacity = Math.min(1, (-deltaX - 20) / 60);
+          elements.stampLike.style.opacity = 0;
+        }
+      }
+    }
+  };
+
+  const onTouchEnd = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    cardEl.classList.remove('is-dragging');
+    if (elements.stampLike) elements.stampLike.style.opacity = 0;
+    if (elements.stampPass) elements.stampPass.style.opacity = 0;
+
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+
+    if (!hasMoved || Math.hypot(deltaX, deltaY) < 8) {
+      const rect = cardEl.getBoundingClientRect();
+      const tapX = (e.changedTouches?.[0]?.clientX || currentX) - rect.left;
+      if (tapX > rect.width * 0.5) {
+        goToNextCardInDeck('next');
+      } else {
+        goToPrevCardInDeck();
+      }
+      return;
+    }
+
+    if (deltaX > 70) {
+      swipeFlyAndAdvance('like', cardEl, deltaX, deltaY);
+    } else if (deltaX < -70) {
+      swipeFlyAndAdvance('pass', cardEl, deltaX, deltaY);
+    } else if (deltaY < -90 && Math.abs(deltaX) < 55) {
+      openDeckNotes(item.post);
+      cardEl.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+    } else {
+      cardEl.style.transition = 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+    }
+  };
+
+  cardEl.addEventListener('touchstart', onTouchStart, { passive: true });
+  cardEl.addEventListener('touchmove', onTouchMove, { passive: false });
+  cardEl.addEventListener('touchend', onTouchEnd, { passive: true });
+  cardEl.addEventListener('touchcancel', onTouchEnd, { passive: true });
 }
 
-// Seamless Continuous Card & Post Advance Engine (Zero Looping on same post!)
+// Advances strictly to the NEXT CARD of the current post (and only moves to next post when cards finish)
 function goToNextCardInDeck(action = 'next') {
-  const total = state.swipeDeck.length;
+  const total = (state.deckCards || []).length;
   if (total === 0) return;
 
-  const currentPost = state.swipeDeck[state.swipeDeckIndex];
-  const cards = currentPost.cards || [];
-  const numCards = cards.length;
+  const currentItem = state.deckCards[state.currentCardIndex];
 
   // Record history for Undo
-  state.swipeHistory.push({
-    postIndex: state.swipeDeckIndex,
-    subCardIndex: state.swipeSubCardIndex,
-  });
+  state.swipeHistory.push(state.currentCardIndex);
 
   if (action === 'like') {
-    state.bookmarks.add(currentPost.postId);
+    state.bookmarks.add(currentItem.post.postId);
     saveBookmarks();
     sounds.playChime();
   } else if (action === 'pass') {
@@ -1075,45 +1163,24 @@ function goToNextCardInDeck(action = 'next') {
     sounds.playPop();
   }
 
-  // If this post has more cards, advance to the next card of THIS post!
-  if (state.swipeSubCardIndex < numCards - 1) {
-    state.swipeSubCardIndex++;
-    updateTopCardSubSlide(currentPost);
-  } else {
-    // THIS POST IS COMPLETE!
-    // AUTOMATICALLY & SEAMLESSLY jump to Card 1 of the NEXT POST!
-    state.swipeDeckIndex = (state.swipeDeckIndex + 1) % total;
-    state.swipeSubCardIndex = 0;
-    renderDeckStack();
-  }
+  // Advance to next card in sequence!
+  state.currentCardIndex = (state.currentCardIndex + 1) % total;
+  renderDeckStack();
 }
 
-// Go to previous card or previous post smoothly
+// Go to previous card cleanly
 function goToPrevCardInDeck() {
-  const total = state.swipeDeck.length;
+  const total = (state.deckCards || []).length;
   if (total === 0) return;
 
   sounds.playPop();
 
   if (state.swipeHistory.length > 0) {
-    const last = state.swipeHistory.pop();
-    state.swipeDeckIndex = last.postIndex;
-    state.swipeSubCardIndex = last.subCardIndex;
-    renderDeckStack();
-    return;
-  }
-
-  if (state.swipeSubCardIndex > 0) {
-    state.swipeSubCardIndex--;
-    const currentPost = state.swipeDeck[state.swipeDeckIndex];
-    updateTopCardSubSlide(currentPost);
+    state.currentCardIndex = state.swipeHistory.pop();
   } else {
-    // Go to the last card of the previous post!
-    state.swipeDeckIndex = (state.swipeDeckIndex - 1 + total) % total;
-    const prevPost = state.swipeDeck[state.swipeDeckIndex];
-    state.swipeSubCardIndex = Math.max(0, (prevPost.cards || []).length - 1);
-    renderDeckStack();
+    state.currentCardIndex = (state.currentCardIndex - 1 + total) % total;
   }
+  renderDeckStack();
 }
 
 // Smooth Fly-away Animation for Like/Pass
@@ -1131,7 +1198,7 @@ function swipeFlyAndAdvance(action, cardEl, deltaX = 0, deltaY = 0) {
   }
 
   if (cardEl) {
-    cardEl.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+    cardEl.style.transition = 'transform 0.24s ease-out, opacity 0.24s ease-out';
     const targetX = deltaX >= 0 ? 1100 : -1100;
     cardEl.style.transform = `translate3d(${targetX}px, ${deltaY || 0}px, 0) rotate(${deltaX >= 0 ? 32 : -32}deg)`;
     cardEl.style.opacity = '0';
@@ -1160,9 +1227,8 @@ function undoSwipe() {
 }
 
 function shuffleDeck() {
-  state.swipeDeck = cryptoShuffle(state.swipeDeck);
-  state.swipeDeckIndex = 0;
-  state.swipeSubCardIndex = 0;
+  state.deckCards = cryptoShuffle(state.deckCards);
+  state.currentCardIndex = 0;
   sounds.playPop();
   renderDeckStack();
 }
@@ -1186,7 +1252,8 @@ function updateTopCardSubSlide(post) {
 
 // Notes Drawer & Modals
 function openDeckNotes(post = null) {
-  const targetPost = post || state.swipeDeck[state.swipeDeckIndex];
+  const currentItem = state.deckCards ? state.deckCards[state.currentCardIndex] : null;
+  const targetPost = post || (currentItem ? currentItem.post : null) || (state.swipeDeck ? state.swipeDeck[state.swipeDeckIndex] : null);
   if (!targetPost) return;
 
   if (elements.drawerPostOrder) elements.drawerPostOrder.textContent = `Post #${targetPost.order}`;

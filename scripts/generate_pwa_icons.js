@@ -92,62 +92,136 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
+// 5x7 bitmap font for "LWA"
+// L: 4x5, W: 5x5, A: 4x5
+function isInsideLwa(px, py) {
+  // px from 0 to 22, py from 0 to 7
+  // 'L' (x: 1 to 5)
+  if (px >= 1 && px <= 2 && py >= 1 && py <= 7) return true;
+  if (px >= 1 && px <= 6 && py >= 6 && py <= 7) return true;
+
+  // 'W' (x: 8 to 15)
+  if ((px === 8 || px === 14) && py >= 1 && py <= 6) return true;
+  if ((px === 9 || px === 13) && py >= 5 && py <= 7) return true;
+  if ((px === 10 || px === 12) && py >= 3 && py <= 6) return true;
+  if (px === 11 && py >= 2 && py <= 4) return true;
+
+  // 'A' (x: 17 to 22)
+  if ((px >= 18 && px <= 20) && py === 1) return true;
+  if ((px === 17 || px === 21) && py >= 2 && py <= 7) return true;
+  if (px >= 17 && px <= 21 && (py === 4 || py === 5)) return true;
+
+  return false;
+}
+
 function renderPwaPixel(x, y, width, height, isMaskable = false) {
   // Normalize coordinates (-1 to 1)
   const nx = (x / width) * 2 - 1;
   const ny = (y / height) * 2 - 1;
 
-  // Squircle check (superellipse: |nx|^3.8 + |ny|^3.8 <= 1)
+  // Squircle check
   const squircle = Math.pow(Math.abs(nx), 3.8) + Math.pow(Math.abs(ny), 3.8);
   if (!isMaskable && squircle > 1.0) {
-    return [0, 0, 0, 0]; // Transparent outer corners for standalone
+    return [0, 0, 0, 0]; // Transparent outer corners
   }
 
-  // Base Gradient (Indigo to Violet to Hot Magenta)
-  const tGrad = (nx + ny + 2) / 4; // 0 to 1 across diagonal
-  let r = Math.round(lerp(49, 219, Math.min(1, tGrad * 1.2)));
-  let g = Math.round(lerp(46, 39, tGrad));
-  let b = Math.round(lerp(129, 119, Math.min(1, tGrad)));
+  // Base Gradient (Deep Violet `#4f46e5` to `#7c3aed` to Hot Pink `#ec4899`)
+  const tGrad = (nx + ny + 2) / 4;
+  let r = Math.round(lerp(67, 236, Math.min(1, tGrad * 1.15)));
+  let g = Math.round(lerp(56, 72, tGrad));
+  let b = Math.round(lerp(202, 153, Math.min(1, tGrad)));
 
-  // Card stack illustration coordinates
-  const scale = isMaskable ? 0.72 : 0.88;
+  // Ambient lighting glow circles
+  const distGlow1 = Math.hypot(nx - 0.45, ny - (-0.45));
+  if (distGlow1 < 0.6) {
+    const glowT = (0.6 - distGlow1) / 0.6;
+    r = Math.min(255, r + Math.round(glowT * 40));
+    b = Math.min(255, b + Math.round(glowT * 50));
+  }
+
+  // Card stack coordinates
+  const scale = isMaskable ? 0.72 : 0.86;
   const cx = nx / scale;
   const cy = ny / scale;
 
-  // Front card rectangle: cx: [-0.48, 0.48], cy: [-0.55, 0.55]
+  // 1. Tilted Back Card (cyan-indigo accent)
+  const angle = -0.18; // ~ -10 degrees
+  const cosA = Math.cos(angle);
+  const sinA = Math.sin(angle);
+  const rx1 = cx * cosA - cy * sinA;
+  const ry1 = cx * sinA + cy * cosA;
+  if (Math.abs(rx1) < 0.46 && Math.abs(ry1) < 0.54) {
+    const cDist = Math.hypot(Math.max(0, Math.abs(rx1) - 0.36), Math.max(0, Math.abs(ry1) - 0.44));
+    if (cDist < 0.1) {
+      r = 30; g = 58; b = 138; // Deep navy accent
+    }
+  }
+
+  // 2. Front Hero Card (white with sleek border and shadow)
   const inCardX = cx >= -0.48 && cx <= 0.48;
-  const inCardY = cy >= -0.55 && cy <= 0.55;
+  const inCardY = cy >= -0.56 && cy <= 0.56;
 
   if (inCardX && inCardY) {
     const cornerDx = Math.max(0, Math.abs(cx) - 0.38);
-    const cornerDy = Math.max(0, Math.abs(cy) - 0.45);
-    const cornerDist = Math.sqrt(cornerDx * cornerDx + cornerDy * cornerDy);
+    const cornerDy = Math.max(0, Math.abs(cy) - 0.46);
+    const cornerDist = Math.hypot(cornerDx, cornerDy);
 
     if (cornerDist < 0.1) {
-      if (cy >= -0.48 && cy <= -0.15 && cx >= -0.38 && cx <= 0.38) {
-        const bannerT = (cx + 0.38) / 0.76;
-        r = Math.round(lerp(236, 139, bannerT));
-        g = Math.round(lerp(72, 92, bannerT));
-        b = Math.round(lerp(153, 246, bannerT));
-      } else if (cy >= -0.05 && cy <= -0.01 && cx >= -0.38 && cx <= 0.25) {
-        r = 30; g = 41; b = 59;
-      } else if (cy >= 0.05 && cy <= 0.08 && cx >= -0.38 && cx <= 0.35) {
-        r = 100; g = 116; b = 139;
-      } else if (cy >= 0.12 && cy <= 0.15 && cx >= -0.38 && cx <= 0.3) {
-        r = 148; g = 163; b = 184;
-      } else if (cy >= 0.24 && cy <= 0.38 && cx >= -0.38 && cx <= -0.1) {
+      // Inside Front Card
+      // Top story bars
+      if (cy >= -0.52 && cy <= -0.49 && Math.abs(cx) <= 0.4) {
+        if (cx < -0.15) { r = 236; g = 72; b = 153; } // Hot pink active
+        else if (cx < 0.1) { r = 139; g = 92; b = 246; } // Violet
+        else { r = 203; g = 213; b = 225; } // Slate
+      }
+      // Upper Card Banner (Gradient Violet-Pink)
+      else if (cy >= -0.46 && cy <= -0.15 && Math.abs(cx) <= 0.4) {
+        const bT = (cx + 0.4) / 0.8;
+        r = Math.round(lerp(236, 124, bT));
+        g = Math.round(lerp(72, 58, bT));
+        b = Math.round(lerp(153, 237, bT));
+
+        // Open Book Vector shape in banner
+        const bx = Math.abs(cx);
+        const by = cy - (-0.3);
+        if (bx < 0.22 && by > -0.09 && by < 0.09) {
+          if (Math.abs(by - 0.02 * bx) < 0.04) {
+            r = 255; g = 255; b = 255;
+          }
+        }
+      }
+      // "LWA" Bold Monogram in Card Center
+      else if (cy >= -0.06 && cy <= 0.22 && Math.abs(cx) <= 0.42) {
+        // Map cx [-0.38, 0.38], cy [-0.04, 0.20] to 23x8 pixel grid
+        const gridX = Math.floor(((cx + 0.38) / 0.76) * 23);
+        const gridY = Math.floor(((cy - (-0.04)) / 0.24) * 8);
+
+        if (gridX >= 0 && gridX < 23 && gridY >= 0 && gridY < 8 && isInsideLwa(gridX, gridY)) {
+          r = 15; g = 23; b = 42; // Bold dark navy letters "LWA"
+        } else {
+          r = 255; g = 255; b = 255; // White background
+        }
+      }
+      // Bottom pill button (Gradient Indigo-Violet)
+      else if (cy >= 0.32 && cy <= 0.46 && cx >= -0.38 && cx <= 0.1) {
         r = 124; g = 58; b = 237;
-      } else {
-        r = 250; g = 252; b = 255;
+      }
+      // Little check circle
+      else if (Math.hypot(cx - 0.26, cy - 0.39) < 0.08) {
+        r = 16; g = 185; b = 129; // Emerald check
+      }
+      else {
+        // Crisp white card surface
+        r = 255; g = 255; b = 255;
       }
     }
   }
 
-  // Golden Sparkle Star in top right
-  const spX = Math.abs(nx - 0.55);
-  const spY = Math.abs(ny - (-0.55));
-  if (spX * spY < 0.008 && spX + spY < 0.22) {
-    r = 254; g = 240; b = 138;
+  // Golden Sparkle Star in top-right (✦)
+  const spX = Math.abs(nx - 0.54);
+  const spY = Math.abs(ny - (-0.54));
+  if (spX * spY < 0.009 && spX + spY < 0.24) {
+    r = 254; g = 240; b = 138; // Golden sparkle
   }
 
   return [r, g, b, 255];
@@ -158,7 +232,7 @@ if (!fs.existsSync(iconsDir)) {
   fs.mkdirSync(iconsDir, { recursive: true });
 }
 
-console.log('Generating PWA icons...');
+console.log('Generating ultra-crisp PWA icons with bold LWA branding...');
 
 // 1. icon-192.png
 const png192 = createPng(192, 192, (x, y, w, h) => renderPwaPixel(x, y, w, h, false));

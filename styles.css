@@ -38,11 +38,32 @@
   --modal-overlay: rgba(15, 23, 42, 0.8);
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+  -webkit-touch-callout: none !important;
+}
+
+*:focus,
+*:focus-visible,
+*:active {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+}
+
+button,
+button:focus,
+button:focus-visible,
+button:active {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
 }
 
 body {
@@ -1119,7 +1140,13 @@ body {
   background: rgba(8, 12, 22, 0.94);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  overflow-y: auto;
+  overflow: hidden;
+  touch-action: none !important;
+  overscroll-behavior: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
 }
 
 .swipe-container {
@@ -1129,6 +1156,11 @@ body {
   flex-direction: column;
   align-items: center;
   position: relative;
+  touch-action: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
 }
 
 .deck-topbar {
@@ -1523,6 +1555,7 @@ body {
 .dock-btn {
   border-radius: 50%;
   border: none;
+  outline: none !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1530,6 +1563,27 @@ body {
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+}
+
+.dock-btn:focus,
+.dock-btn:focus-visible,
+.dock-btn:active,
+.deck-icon-btn:focus,
+.deck-icon-btn:focus-visible,
+.deck-icon-btn:active,
+.card-note-btn:focus,
+.card-note-btn:active,
+.card-star-btn:focus,
+.card-star-btn:active,
+.magic-exit-btn:focus,
+.magic-exit-btn:active {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
 }
 
 .dock-btn:hover {
