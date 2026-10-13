@@ -3,14 +3,35 @@
   "short_name": "LWA English",
   "description": "Interactive visual archive of English vocabulary, pronunciation, and idioms community post cards from Learn with Ashmeet.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "background_color": "#090d16",
+  "theme_color": "#7c3aed",
   "icons": [
     {
-      "src": "cards/Post_001_8_hours_ago_Do_you_know_these_everyday_opposite/Card_01.webp",
-      "sizes": "192x192 512x512",
-      "type": "image/webp"
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

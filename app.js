@@ -297,11 +297,44 @@ function toggleTheme() {
   setTheme(state.theme === 'light' ? 'dark' : 'light');
 }
 
-// Service Worker Registration for PWA
+// Service Worker Registration for PWA with Instant Auto-Update
 function initServiceWorker() {
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('sw.js').catch((err) => {
+    navigator.serviceWorker.register('sw.js').then((registration) => {
+      // Check for updates on startup
+      registration.update().catch(() => {});
+
+      // When a new service worker is waiting, activate immediately
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        }
+      });
+    }).catch((err) => {
       console.warn('Service Worker registration skipped:', err);
+    });
+
+    // Seamlessly reload when new service worker activates
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
+    // Also check for updates whenever user returns to the app tab/PWA
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        navigator.serviceWorker.getRegistration().then((reg) => {
+          if (reg) reg.update().catch(() => {});
+        });
+      }
     });
   }
 }
@@ -392,21 +425,27 @@ function applyFilters() {
   // 2. High-precision Multi-token and Post Order Search
   if (state.searchQuery) {
     const raw = state.searchQuery.trim().toLowerCase();
-    const orderNumber = raw.replace(/[^0-9]/g, '');
-    const tokens = raw.split(/\s+/).filter((t) => t.length > 0);
+    const explicitOrderMatch = raw.match(/^(?:post\s*#?|#)\s*(\d+)$/i) || (/^\d+$/.test(raw) ? [null, raw] : null);
+    const explicitOrder = explicitOrderMatch ? parseInt(explicitOrderMatch[1], 10) : null;
 
-    list = list.filter((p) => {
-      // Direct post number match (e.g. "61", "#61", "post 61", "post #61")
-      if (orderNumber && String(p.order) === orderNumber) return true;
+    if (explicitOrder !== null) {
+      list = list.filter((p) => p.order === explicitOrder);
+    } else {
+      // Multi-keyword tokenized search across text, hashtags, dates, and card file topics
+      const tokens = raw.split(/\s+/).filter((t) => t.length > 0);
 
-      const text = (p.text || '').toLowerCase();
-      const time = (p.publishedTime || '').toLowerCase();
-      const type = (p.type || '').toLowerCase();
-      const cardsPath = (p.cards || []).map((c) => c.webpUrl || '').join(' ').toLowerCase();
-      const combined = `${text} ${time} ${type} post #${p.order} ${cardsPath}`;
+      list = list.filter((p) => {
+        const text = (p.text || '').toLowerCase();
+        const time = (p.publishedTime || '').toLowerCase();
+        const type = (p.type || '').toLowerCase();
+        const cardKeywords = (p.cards || [])
+          .map((c) => (c.webpUrl || '').replace(/[^a-zA-Z0-9]/g, ' ').toLowerCase())
+          .join(' ');
+        const searchableCorpus = `${text} ${time} ${type} post #${p.order} ${cardKeywords}`;
 
-      return tokens.every((token) => combined.includes(token));
-    });
+        return tokens.every((token) => searchableCorpus.includes(token));
+      });
+    }
   }
 
   // 3. Calendar / Date Range filter
@@ -451,7 +490,8 @@ function renderGrid() {
   elements.cardsGrid.textContent = ''; // clear
 
   const total = state.filteredPosts.length;
-  elements.resultsCount.textContent = `Showing ${total} of ${state.allPosts.length} posts`;
+  const totalCardsCount = state.filteredPosts.reduce((acc, p) => acc + (p.totalCards || (p.cards ? p.cards.length : 1)), 0);
+  elements.resultsCount.textContent = `Showing ${total} of ${state.allPosts.length} posts (${totalCardsCount.toLocaleString()} cards)`;
 
   if (total === 0) {
     elements.emptyState.style.display = 'block';
@@ -775,9 +815,12 @@ function switchViewMode(mode) {
 }
 
 function initSwipeDeck(startPostIndex = 0) {
-  const source = state.filteredPosts && state.filteredPosts.length > 0 ? state.filteredPosts : state.allPosts;
+  const source = state.searchQuery || state.activeTab !== 'all' || state.dateFilter.presetDays > 0 || state.dateFilter.startDate
+    ? state.filteredPosts
+    : (state.filteredPosts.length > 0 ? state.filteredPosts : state.allPosts);
+
   state.swipeDeck = [...source];
-  state.swipeDeckIndex = Math.min(Math.max(0, startPostIndex), state.swipeDeck.length);
+  state.swipeDeckIndex = Math.min(Math.max(0, startPostIndex), Math.max(0, state.swipeDeck.length - 1));
   state.swipeSubCardIndex = 0;
   state.swipeHistory = [];
   renderDeckStack();
@@ -789,38 +832,31 @@ function renderDeckStack() {
 
   const total = state.swipeDeck.length;
   if (total === 0) {
-    if (elements.deckCompleted) elements.deckCompleted.style.display = 'flex';
-    if (elements.deckCounterText) elements.deckCounterText.textContent = '0 cards found';
+    if (elements.deckCompleted) {
+      elements.deckCompleted.style.display = 'flex';
+      const heading = elements.deckCompleted.querySelector('h2');
+      if (heading) heading.textContent = state.searchQuery ? 'No matching cards' : 'All Caught Up!';
+      const p = elements.deckCompleted.querySelector('p');
+      if (p) p.textContent = state.searchQuery ? `No posts or cards found matching "${state.searchQuery}".` : 'You have reviewed all the cards in this deck.';
+    }
     return;
   }
 
   if (elements.deckCompleted) elements.deckCompleted.style.display = 'none';
 
-  // Continuous seamless loop so reading NEVER stops until user exits!
-  if (state.swipeDeckIndex >= total) {
-    state.swipeDeckIndex = state.swipeDeckIndex % total;
-  }
-  if (state.swipeDeckIndex < 0) {
-    state.swipeDeckIndex = (state.swipeDeckIndex + total) % total;
-  }
+  // Modulo wrap-around so navigation never crashes
+  state.swipeDeckIndex = ((state.swipeDeckIndex % total) + total) % total;
 
   const currentIdx = state.swipeDeckIndex;
   const currentPost = state.swipeDeck[currentIdx];
 
-  if (elements.deckCounterText) {
-    const numCards = (currentPost.cards || []).length;
-    const cardPart = numCards > 1 ? ` • Slide ${state.swipeSubCardIndex + 1}/${numCards}` : '';
-    elements.deckCounterText.textContent = `Post #${currentPost.order} (${currentIdx + 1}/${total})${cardPart}`;
-  }
-
-  // Render 3 cards in stack (Top = 0, Next = 1, Third = 2) with circular wrapping
+  // Render 3 stacked cards with circular wrap
   const stackCards = [
     state.swipeDeck[currentIdx],
     state.swipeDeck[(currentIdx + 1) % total],
     state.swipeDeck[(currentIdx + 2) % total],
   ];
 
-  // Append in reverse order so top card is top DOM child
   for (let i = stackCards.length - 1; i >= 0; i--) {
     const post = stackCards[i];
     const isTop = i === 0;
@@ -843,7 +879,7 @@ function createSwipeCardElement(post, isTop, depthIndex) {
   const activeSubIndex = isTop ? state.swipeSubCardIndex : 0;
   const currentCardData = cards[activeSubIndex] || cards[0];
 
-  // Story Indicator Progress Bars (Instagram / Bumble style)
+  // Story Indicator Progress Bars (Instagram / Tinder Carousel style)
   if (numCards > 1) {
     const storyBars = document.createElement('div');
     storyBars.className = 'story-bars';
@@ -855,32 +891,28 @@ function createSwipeCardElement(post, isTop, depthIndex) {
     cardEl.appendChild(storyBars);
   }
 
-  // Header Overlay Pills
+  // Minimal Header Overlay with sleek indicative icons (ZERO text words)
   const headerOverlay = document.createElement('div');
   headerOverlay.className = 'card-header-overlay';
 
-  const pillsGroup = document.createElement('div');
-  pillsGroup.className = 'card-pills-group';
+  // Notes drawer trigger icon
+  const noteBtn = document.createElement('button');
+  noteBtn.className = 'card-note-btn';
+  noteBtn.textContent = 'ℹ️';
+  noteBtn.title = 'View lesson notes';
+  noteBtn.setAttribute('aria-label', 'Lesson Notes');
+  noteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openDeckNotes(post);
+  });
+  headerOverlay.appendChild(noteBtn);
 
-  const orderBadge = document.createElement('span');
-  orderBadge.className = 'card-badge-order';
-  orderBadge.textContent = `Post #${post.order}`;
-  pillsGroup.appendChild(orderBadge);
-
-  if (numCards > 1) {
-    const countBadge = document.createElement('span');
-    countBadge.className = 'card-badge-count';
-    countBadge.textContent = `🃏 ${activeSubIndex + 1}/${numCards}`;
-    pillsGroup.appendChild(countBadge);
-  }
-
-  headerOverlay.appendChild(pillsGroup);
-
-  // Star / Bookmark Button
+  // Bookmark Star icon
   const starBtn = document.createElement('button');
   starBtn.className = `card-star-btn ${state.bookmarks.has(post.postId) ? 'active' : ''}`;
   starBtn.textContent = '⭐';
-  starBtn.title = 'Bookmark this post';
+  starBtn.title = 'Bookmark post';
+  starBtn.setAttribute('aria-label', 'Bookmark');
   starBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleBookmark(post.postId);
@@ -890,91 +922,46 @@ function createSwipeCardElement(post, isTop, depthIndex) {
   headerOverlay.appendChild(starBtn);
   cardEl.appendChild(headerOverlay);
 
-  // Card Image Container
+  // Pure Visual Card Image (100% visible, zero obscuring text)
   const imageBox = document.createElement('div');
   imageBox.className = 'card-image-box';
 
   const img = document.createElement('img');
   img.src = currentCardData ? currentCardData.webpUrl : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23334155"><rect width="100%" height="100%"/></svg>';
-  img.alt = `Card for Post #${post.order}`;
+  img.alt = `English card visual`;
   img.loading = isTop ? 'eager' : 'lazy';
   if (currentCardData && currentCardData.fallbackUrl) {
     img.onerror = () => { img.src = currentCardData.fallbackUrl; };
   }
   imageBox.appendChild(img);
-
-  // Tap Zones for Carousel navigation
-  if (isTop && numCards > 1) {
-    const tapLeft = document.createElement('div');
-    tapLeft.className = 'tap-zone tap-zone-left';
-    tapLeft.title = 'Previous card';
-    tapLeft.addEventListener('click', (e) => {
-      e.stopPropagation();
-      prevSlideInDeckPost();
-    });
-
-    const tapRight = document.createElement('div');
-    tapRight.className = 'tap-zone tap-zone-right';
-    tapRight.title = 'Next card';
-    tapRight.addEventListener('click', (e) => {
-      e.stopPropagation();
-      nextSlideInDeckPost();
-    });
-
-    imageBox.appendChild(tapLeft);
-    imageBox.appendChild(tapRight);
-  }
-
   cardEl.appendChild(imageBox);
-
-  // Bottom Action Bar - Clean, uncluttered, no text obscuring the visual card!
-  const infoOverlay = document.createElement('div');
-  infoOverlay.className = 'card-info-overlay';
-
-  const actionBar = document.createElement('div');
-  actionBar.className = 'card-action-bar';
-
-  const metaPill = document.createElement('span');
-  metaPill.className = 'card-meta-pill';
-  metaPill.textContent = `❤️ ${post.likes || '0'} • ${post.publishedTime || formatDate(post.publishedDateISO)}`;
-  actionBar.appendChild(metaPill);
-
-  const moreInfoBtn = document.createElement('button');
-  moreInfoBtn.className = 'deck-more-info-btn';
-  moreInfoBtn.textContent = 'ℹ️ More Info';
-  moreInfoBtn.title = 'View lesson notes & explanation';
-  moreInfoBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openDeckNotes(post);
-  });
-  actionBar.appendChild(moreInfoBtn);
-
-  infoOverlay.appendChild(actionBar);
-  cardEl.appendChild(infoOverlay);
 
   return cardEl;
 }
 
+// True Tinder / Bumble Gesture Physics with Pointer & Tap Detection
 function bindCardDragPhysics(cardEl, post) {
   let isPointerDown = false;
+  let isDragging = false;
   let startX = 0;
   let startY = 0;
   let currentX = 0;
   let currentY = 0;
 
   const onPointerDown = (e) => {
-    if (e.target.closest('button') || e.target.closest('.tap-zone')) return;
+    if (e.target.closest('button')) return;
 
     isPointerDown = true;
+    isDragging = false;
     startX = e.clientX;
     startY = e.clientY;
     currentX = startX;
     currentY = startY;
 
-    cardEl.classList.add('is-dragging');
     try {
       cardEl.setPointerCapture(e.pointerId);
     } catch (err) {}
+    cardEl.style.transition = 'none';
   };
 
   const onPointerMove = (e) => {
@@ -985,28 +972,27 @@ function bindCardDragPhysics(cardEl, post) {
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
 
-    // Dynamic rotation: 0.08 deg per px
-    const rotation = deltaX * 0.08;
-    cardEl.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotate(${rotation}deg)`;
+    if (!isDragging && Math.hypot(deltaX, deltaY) > 7) {
+      isDragging = true;
+      cardEl.classList.add('is-dragging');
+    }
 
-    // Update floating stamps
-    if (elements.stampLike && elements.stampPass && elements.stampNotes) {
-      if (deltaX > 20) {
-        elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 70);
-        elements.stampPass.style.opacity = 0;
-        elements.stampNotes.style.opacity = 0;
-      } else if (deltaX < -20) {
-        elements.stampPass.style.opacity = Math.min(1, (-deltaX - 20) / 70);
-        elements.stampLike.style.opacity = 0;
-        elements.stampNotes.style.opacity = 0;
-      } else if (deltaY < -30 && Math.abs(deltaX) < 50) {
-        elements.stampNotes.style.opacity = Math.min(1, (-deltaY - 30) / 70);
-        elements.stampLike.style.opacity = 0;
-        elements.stampPass.style.opacity = 0;
-      } else {
-        elements.stampLike.style.opacity = 0;
-        elements.stampPass.style.opacity = 0;
-        elements.stampNotes.style.opacity = 0;
+    if (isDragging) {
+      const rotation = deltaX * 0.08;
+      cardEl.style.transform = `translate3d(${deltaX}px, ${deltaY * 0.45}px, 0) rotate(${rotation}deg)`;
+
+      // Dynamic glowing stamps
+      if (elements.stampLike && elements.stampPass) {
+        if (deltaX > 20) {
+          elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 60);
+          elements.stampPass.style.opacity = 0;
+        } else if (deltaX < -20) {
+          elements.stampPass.style.opacity = Math.min(1, (-deltaX - 20) / 60);
+          elements.stampLike.style.opacity = 0;
+        } else {
+          elements.stampLike.style.opacity = 0;
+          elements.stampPass.style.opacity = 0;
+        }
       }
     }
   };
@@ -1020,7 +1006,7 @@ function bindCardDragPhysics(cardEl, post) {
       cardEl.releasePointerCapture(e.pointerId);
     } catch (err) {}
 
-    // Reset stamps
+    // Reset stamp opacities
     if (elements.stampLike) elements.stampLike.style.opacity = 0;
     if (elements.stampPass) elements.stampPass.style.opacity = 0;
     if (elements.stampNotes) elements.stampNotes.style.opacity = 0;
@@ -1028,16 +1014,33 @@ function bindCardDragPhysics(cardEl, post) {
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
 
-    // Swipe Threshold: 90px horizontal or drag up
-    if (deltaX > 90) {
-      swipeCardAction('like', cardEl, post, deltaX, deltaY);
-    } else if (deltaX < -90) {
-      swipeCardAction('pass', cardEl, post, deltaX, deltaY);
-    } else if (deltaY < -100 && Math.abs(deltaX) < 60) {
-      cardEl.style.transform = '';
+    // TAP GESTURE DETECTION (If moved < 8px total)
+    if (!isDragging || Math.hypot(deltaX, deltaY) < 8) {
+      const rect = cardEl.getBoundingClientRect();
+      const tapX = e.clientX - rect.left;
+      if (tapX > rect.width * 0.5) {
+        // Tapped right half -> Advance to next card!
+        goToNextCardInDeck('next');
+      } else {
+        // Tapped left half -> Go back to previous card!
+        goToPrevCardInDeck();
+      }
+      return;
+    }
+
+    // DRAG SWIPE THRESHOLD (> 75px horizontal or swipe up)
+    if (deltaX > 75) {
+      swipeFlyAndAdvance('like', cardEl, deltaX, deltaY);
+    } else if (deltaX < -75) {
+      swipeFlyAndAdvance('pass', cardEl, deltaX, deltaY);
+    } else if (deltaY < -90 && Math.abs(deltaX) < 55) {
       openDeckNotes(post);
+      cardEl.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
     } else {
-      cardEl.style.transform = '';
+      // Smooth elastic spring back to center
+      cardEl.style.transition = 'transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cardEl.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
     }
   };
 
@@ -1047,18 +1050,18 @@ function bindCardDragPhysics(cardEl, post) {
   cardEl.addEventListener('pointercancel', onPointerUp);
 }
 
-function swipeCardAction(action, cardEl = null, post = null, deltaX = 0, deltaY = 0) {
+// Seamless Continuous Card & Post Advance Engine (Zero Looping on same post!)
+function goToNextCardInDeck(action = 'next') {
   const total = state.swipeDeck.length;
   if (total === 0) return;
 
-  const currentPost = post || state.swipeDeck[state.swipeDeckIndex];
-  const activeEl = cardEl || elements.cardStack?.querySelector('.swipe-card.is-top');
+  const currentPost = state.swipeDeck[state.swipeDeckIndex];
+  const cards = currentPost.cards || [];
+  const numCards = cards.length;
 
-  // Push to history for undo
+  // Record history for Undo
   state.swipeHistory.push({
-    post: currentPost,
-    action: action,
-    index: state.swipeDeckIndex,
+    postIndex: state.swipeDeckIndex,
     subCardIndex: state.swipeSubCardIndex,
   });
 
@@ -1066,78 +1069,102 @@ function swipeCardAction(action, cardEl = null, post = null, deltaX = 0, deltaY 
     state.bookmarks.add(currentPost.postId);
     saveBookmarks();
     sounds.playChime();
-    if (elements.stampLike) {
-      elements.stampLike.style.opacity = 1;
-      setTimeout(() => { if (elements.stampLike) elements.stampLike.style.opacity = 0; }, 200);
-    }
-    if (activeEl) {
-      activeEl.style.transform = `translate3d(1200px, ${deltaY || 30}px, 0) rotate(35deg)`;
-      activeEl.style.opacity = '0';
-    }
   } else if (action === 'pass') {
     sounds.playSwoosh();
+  } else {
+    sounds.playPop();
+  }
+
+  // If this post has more cards, advance to the next card of THIS post!
+  if (state.swipeSubCardIndex < numCards - 1) {
+    state.swipeSubCardIndex++;
+    updateTopCardSubSlide(currentPost);
+  } else {
+    // THIS POST IS COMPLETE!
+    // AUTOMATICALLY & SEAMLESSLY jump to Card 1 of the NEXT POST!
+    state.swipeDeckIndex = (state.swipeDeckIndex + 1) % total;
+    state.swipeSubCardIndex = 0;
+    renderDeckStack();
+  }
+}
+
+// Go to previous card or previous post smoothly
+function goToPrevCardInDeck() {
+  const total = state.swipeDeck.length;
+  if (total === 0) return;
+
+  sounds.playPop();
+
+  if (state.swipeHistory.length > 0) {
+    const last = state.swipeHistory.pop();
+    state.swipeDeckIndex = last.postIndex;
+    state.swipeSubCardIndex = last.subCardIndex;
+    renderDeckStack();
+    return;
+  }
+
+  if (state.swipeSubCardIndex > 0) {
+    state.swipeSubCardIndex--;
+    const currentPost = state.swipeDeck[state.swipeDeckIndex];
+    updateTopCardSubSlide(currentPost);
+  } else {
+    // Go to the last card of the previous post!
+    state.swipeDeckIndex = (state.swipeDeckIndex - 1 + total) % total;
+    const prevPost = state.swipeDeck[state.swipeDeckIndex];
+    state.swipeSubCardIndex = Math.max(0, (prevPost.cards || []).length - 1);
+    renderDeckStack();
+  }
+}
+
+// Smooth Fly-away Animation for Like/Pass
+function swipeFlyAndAdvance(action, cardEl, deltaX = 0, deltaY = 0) {
+  if (action === 'like') {
+    if (elements.stampLike) {
+      elements.stampLike.style.opacity = 1;
+      setTimeout(() => { if (elements.stampLike) elements.stampLike.style.opacity = 0; }, 180);
+    }
+  } else if (action === 'pass') {
     if (elements.stampPass) {
       elements.stampPass.style.opacity = 1;
-      setTimeout(() => { if (elements.stampPass) elements.stampPass.style.opacity = 0; }, 200);
-    }
-    if (activeEl) {
-      activeEl.style.transform = `translate3d(-1200px, ${deltaY || 30}px, 0) rotate(-35deg)`;
-      activeEl.style.opacity = '0';
+      setTimeout(() => { if (elements.stampPass) elements.stampPass.style.opacity = 0; }, 180);
     }
   }
 
-  // Seamless continuous loop so cards never stop displaying!
-  state.swipeDeckIndex = (state.swipeDeckIndex + 1) % total;
-  state.swipeSubCardIndex = 0;
+  if (cardEl) {
+    cardEl.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+    const targetX = deltaX >= 0 ? 1100 : -1100;
+    cardEl.style.transform = `translate3d(${targetX}px, ${deltaY || 0}px, 0) rotate(${deltaX >= 0 ? 32 : -32}deg)`;
+    cardEl.style.opacity = '0';
+  }
 
   setTimeout(() => {
-    renderDeckStack();
-  }, 220);
+    goToNextCardInDeck(action);
+  }, 150);
+}
+
+function swipeCardAction(action, cardEl = null, deltaX = 0, deltaY = 0) {
+  if (cardEl) {
+    swipeFlyAndAdvance(action, cardEl, deltaX, deltaY);
+  } else {
+    const topCard = elements.cardStack?.querySelector('.swipe-card.is-top');
+    if (topCard) {
+      swipeFlyAndAdvance(action, topCard, action === 'like' ? 200 : -200, 0);
+    } else {
+      goToNextCardInDeck(action);
+    }
+  }
 }
 
 function undoSwipe() {
-  const total = state.swipeDeck.length;
-  if (total === 0) return;
-  if (state.swipeHistory.length > 0) {
-    const last = state.swipeHistory.pop();
-    state.swipeDeckIndex = last.index;
-    state.swipeSubCardIndex = last.subCardIndex || 0;
-  } else {
-    state.swipeDeckIndex = (state.swipeDeckIndex - 1 + total) % total;
-    state.swipeSubCardIndex = 0;
-  }
-  sounds.playPop();
-  renderDeckStack();
+  goToPrevCardInDeck();
 }
 
 function shuffleDeck() {
-  if (state.swipeDeckIndex >= state.swipeDeck.length) {
-    state.swipeDeck = cryptoShuffle(state.allPosts);
-    state.swipeDeckIndex = 0;
-  } else {
-    const completed = state.swipeDeck.slice(0, state.swipeDeckIndex);
-    const remaining = cryptoShuffle(state.swipeDeck.slice(state.swipeDeckIndex));
-    state.swipeDeck = [...completed, ...remaining];
-  }
+  state.swipeDeck = cryptoShuffle(state.swipeDeck);
+  state.swipeDeckIndex = 0;
   state.swipeSubCardIndex = 0;
   sounds.playPop();
   renderDeckStack();
-}
-
-function nextSlideInDeckPost() {
-  const post = state.swipeDeck[state.swipeDeckIndex];
-  if (!post || !post.cards || post.cards.length <= 1) return;
-  state.swipeSubCardIndex = (state.swipeSubCardIndex + 1) % post.cards.length;
-  sounds.playPop();
-  updateTopCardSubSlide(post);
-}
-
-function prevSlideInDeckPost() {
-  const post = state.swipeDeck[state.swipeDeckIndex];
-  if (!post || !post.cards || post.cards.length <= 1) return;
-  state.swipeSubCardIndex = (state.swipeSubCardIndex - 1 + post.cards.length) % post.cards.length;
-  sounds.playPop();
-  updateTopCardSubSlide(post);
 }
 
 function updateTopCardSubSlide(post) {
@@ -1146,22 +1173,15 @@ function updateTopCardSubSlide(post) {
 
   const cards = post.cards || [];
   const currentCard = cards[state.swipeSubCardIndex];
-  const img = topCard.querySelector('img');
+  const img = topCard.querySelector('.card-image-box img');
   if (img && currentCard) {
     img.src = currentCard.webpUrl;
   }
 
-  // Update story bars
   const bars = topCard.querySelectorAll('.story-bar');
   bars.forEach((bar, idx) => {
     bar.classList.toggle('active', idx === state.swipeSubCardIndex);
   });
-
-  // Update badge count
-  const countBadge = topCard.querySelector('.card-badge-count');
-  if (countBadge) {
-    countBadge.textContent = `🃏 ${state.swipeSubCardIndex + 1}/${cards.length}`;
-  }
 }
 
 // Notes Drawer & Modals
@@ -1319,16 +1339,24 @@ function attachEventListeners() {
 
   // Bumble / Tinder Dock Action Buttons
   if (elements.dockUndoBtn) {
-    elements.dockUndoBtn.addEventListener('click', undoSwipe);
+    elements.dockUndoBtn.addEventListener('click', () => goToPrevCardInDeck());
   }
   if (elements.dockPassBtn) {
-    elements.dockPassBtn.addEventListener('click', () => swipeCardAction('pass'));
+    elements.dockPassBtn.addEventListener('click', () => {
+      const topCard = elements.cardStack?.querySelector('.swipe-card.is-top');
+      if (topCard) swipeFlyAndAdvance('pass', topCard, -200, 0);
+      else goToNextCardInDeck('pass');
+    });
   }
   if (elements.dockShuffleBtn) {
     elements.dockShuffleBtn.addEventListener('click', shuffleDeck);
   }
   if (elements.dockLikeBtn) {
-    elements.dockLikeBtn.addEventListener('click', () => swipeCardAction('like'));
+    elements.dockLikeBtn.addEventListener('click', () => {
+      const topCard = elements.cardStack?.querySelector('.swipe-card.is-top');
+      if (topCard) swipeFlyAndAdvance('like', topCard, 200, 0);
+      else goToNextCardInDeck('like');
+    });
   }
   if (elements.dockNotesBtn) {
     elements.dockNotesBtn.addEventListener('click', () => openDeckNotes());
@@ -1485,21 +1513,24 @@ function attachEventListeners() {
 
     // 4. Magic Swipe Mode shortcuts
     if (state.viewMode === 'swipe') {
+      const topCard = elements.cardStack?.querySelector('.swipe-card.is-top');
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        swipeCardAction('pass');
+        if (topCard) swipeFlyAndAdvance('pass', topCard, -200, 0);
+        else goToNextCardInDeck('pass');
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        swipeCardAction('like');
+        if (topCard) swipeFlyAndAdvance('like', topCard, 200, 0);
+        else goToNextCardInDeck('like');
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         openDeckNotes();
       } else if (e.key === 'ArrowDown' || e.key === ' ') {
         e.preventDefault();
-        nextSlideInDeckPost();
+        goToNextCardInDeck('next');
       } else if (e.key === 'z' || e.key === 'Z') {
         e.preventDefault();
-        undoSwipe();
+        goToPrevCardInDeck();
       } else if (e.key === 'h' || e.key === 'H' || e.key === 'Escape') {
         e.preventDefault();
         switchViewMode('grid');

@@ -42,6 +42,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 body {
@@ -1142,22 +1143,26 @@ body {
 .magic-exit-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 1.15rem;
-  font-size: 0.85rem;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #ffffff;
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(236, 72, 153, 0.45);
   transition: all var(--transition-speed) ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 .magic-exit-btn:hover {
-  transform: scale(1.06);
-  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.65);
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.7);
 }
 
 .deck-counter-pill {
@@ -1329,46 +1334,43 @@ body {
 
 .deck-stamp {
   position: absolute;
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: 2px;
-  padding: 0.45rem 1.15rem;
-  border-radius: 12px;
-  border: 3.5px solid;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
   opacity: 0;
   transition: opacity 0.08s ease;
   pointer-events: none;
-  text-transform: uppercase;
 }
 
 .stamp-like {
-  top: 36px;
+  top: 32px;
   left: 20px;
-  color: #10b981;
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  transform: rotate(-15deg);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.25);
+  border: 2px solid #10b981;
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.6);
+  transform: rotate(-10deg);
 }
 
 .stamp-pass {
-  top: 36px;
+  top: 32px;
   right: 20px;
-  color: #ef4444;
-  border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.15);
-  transform: rotate(15deg);
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.25);
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.6);
+  transform: rotate(10deg);
 }
 
 .stamp-notes {
   top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #a855f7;
-  border-color: #a855f7;
-  background: rgba(168, 85, 247, 0.18);
-  box-shadow: 0 0 25px rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.25);
+  border: 2px solid #a855f7;
+  box-shadow: 0 0 28px rgba(168, 85, 247, 0.6);
 }
 
 /* Story Indicator Progress Bars */
@@ -1457,7 +1459,7 @@ body {
   transform: scale(1.1);
 }
 
-/* Card Image & Tap Zones */
+/* Card Image */
 .card-image-box {
   position: relative;
   width: 100%;
@@ -1467,6 +1469,9 @@ body {
   justify-content: center;
   background: #090d16;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 .card-image-box img {
@@ -1475,80 +1480,34 @@ body {
   object-fit: contain; /* Complete card visible, ZERO cropping of text or graphics */
   display: block;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-.tap-zone {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 40%;
-  z-index: 22;
-  cursor: pointer;
-}
-
-.tap-zone-left {
-  left: 0;
-}
-
-.tap-zone-right {
-  right: 0;
-}
-
-/* Card Info Overlay (Bottom) - Clean, Uncluttered, Minimal */
-.card-info-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 26;
-  padding: 0.65rem 0.85rem;
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-action-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 0.8rem;
-  color: #cbd5e1;
-}
-
-.card-meta-pill {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: #cbd5e1;
+/* Indicative Corner Icon Button */
+.card-note-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(6px);
-  padding: 0.22rem 0.6rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.deck-more-info-btn {
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.3rem 0.75rem;
-  border-radius: 9999px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(6px);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.4);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-.deck-more-info-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.6);
+.card-note-btn:hover {
+  transform: scale(1.1);
+  background: rgba(139, 92, 246, 0.5);
 }
 
 /* Tinder & Bumble Action Button Dock */

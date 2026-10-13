@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#312e81"/>
+      <stop offset="35%" stop-color="#4f46e5"/>
+      <stop offset="70%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+    <linearGradient id="cardFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="cardBackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.3)"/>
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.1)"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad)"/>
+  <circle cx="120" cy="110" r="130" fill="#ec4899" opacity="0.35"/>
+  <circle cx="410" cy="400" r="160" fill="#6366f1" opacity="0.4"/>
+
+  <!-- Back Card -->
+  <g transform="translate(256, 266) rotate(-14) translate(-256, -266)">
+    <rect x="146" y="116" width="220" height="300" rx="24" fill="url(#cardBackGrad)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  </g>
+
+  <!-- Front Card -->
+  <rect x="146" y="112" width="220" height="304" rx="26" fill="url(#cardFrontGrad)"/>
+  <rect x="166" y="148" width="180" height="120" rx="14" fill="url(#accentGrad)"/>
+  <path d="M 256 182 C 242 174 218 174 196 178 L 196 236 C 218 232 242 232 256 240 C 270 232 294 232 316 236 L 316 178 C 294 174 270 174 256 182 Z" fill="#ffffff" opacity="0.95"/>
+  <rect x="166" y="286" width="130" height="12" rx="6" fill="#1e293b"/>
+  <rect x="166" y="308" width="180" height="8" rx="4" fill="#64748b"/>
+  <rect x="166" y="324" width="150" height="8" rx="4" fill="#94a3b8"/>
+  <rect x="166" y="366" width="70" height="24" rx="12" fill="url(#accentGrad)"/>
+
+  <!-- Sparkles -->
+  <g transform="translate(396, 102)">
+    <path d="M 0 -28 Q 0 0 28 0 Q 0 0 0 28 Q 0 0 -28 0 Q 0 0 0 -28 Z" fill="url(#goldGrad)"/>
+  </g>
+</svg>

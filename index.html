@@ -6,7 +6,13 @@
   <title>Learn with Ashmeet - Visual English Archive</title>
   <meta name="description" content="Visual learning archive of 220+ English vocabulary, pronunciation, and idioms community post cards from Learn with Ashmeet.">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e293b">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LWA English">
+  <meta name="theme-color" content="#7c3aed">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -142,24 +148,23 @@
     <div class="swipe-container">
       <!-- Swipe Deck Top Header Bar -->
       <div class="deck-topbar">
-        <button id="magicExitBtn" class="magic-exit-btn" title="Exit Magic Mode (Return to Normal Grid)">
-          <span class="magic-sparkle">✨</span> Exit Magic Mode
+        <button id="magicExitBtn" class="magic-exit-btn" title="Exit Magic Mode" aria-label="Exit Magic Mode">
+          <span class="magic-sign">✦</span>
         </button>
         <button id="deckHomeBtn" style="display: none;">Home</button>
 
-        <div class="deck-counter-pill">
-          <span class="deck-pill-icon">🎴</span>
-          <span id="deckCounterText">Card 1 of 222</span>
+        <div class="deck-counter-pill" id="deckCounterPill" style="display: none;">
+          <span id="deckCounterText"></span>
         </div>
 
         <div class="deck-actions-top">
           <button id="deckSearchToggleBtn" class="deck-icon-btn" title="Search inside deck" aria-label="Search Deck">
             🔍
           </button>
-          <button id="soundToggleBtn" class="deck-icon-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
+          <button id="soundToggleBtn" class="deck-icon-btn" title="Toggle Sound" aria-label="Toggle Sound">
             <span id="soundIcon">🔊</span>
           </button>
-          <button id="deckHelpBtn" class="deck-icon-btn" title="Swipe Guide & Keyboard Shortcuts" aria-label="Help">
+          <button id="deckHelpBtn" class="deck-icon-btn" title="Help" aria-label="Help">
             ❓
           </button>
         </div>
@@ -167,8 +172,8 @@
 
       <!-- Quick Deck Search Bar -->
       <div class="deck-search-bar" id="deckSearchBar" style="display: none;">
-        <input type="text" id="deckSearchInput" placeholder="Search deck (e.g. hair, cooking, #61)..." autocomplete="off">
-        <button id="deckSearchSubmitBtn" class="deck-search-submit-btn">Search</button>
+        <input type="text" id="deckSearchInput" placeholder="Search (e.g. hair, cooking, #61)..." autocomplete="off">
+        <button id="deckSearchSubmitBtn" class="deck-search-submit-btn" aria-label="Search">🔍</button>
         <button id="deckSearchCloseBtn" class="deck-search-close-btn" title="Close Search">✕</button>
       </div>
 
@@ -176,9 +181,9 @@
       <div class="deck-viewport">
         <!-- Floating Stamp Indicators -->
         <div class="deck-stamp-overlay">
-          <div class="deck-stamp stamp-like" id="stampLike">⭐ SAVE</div>
-          <div class="deck-stamp stamp-pass" id="stampPass">✕ NEXT</div>
-          <div class="deck-stamp stamp-notes" id="stampNotes">📖 NOTES</div>
+          <div class="deck-stamp stamp-like" id="stampLike">❤️</div>
+          <div class="deck-stamp stamp-pass" id="stampPass">✕</div>
+          <div class="deck-stamp stamp-notes" id="stampNotes">📖</div>
         </div>
 
         <!-- 3D Card Stack Container -->
@@ -192,38 +197,33 @@
           <h2>All Caught Up!</h2>
           <p>You have reviewed all the community cards in this deck.</p>
           <div class="completed-actions">
-            <button id="deckRestartBtn" class="primary-btn">🔀 Shuffle & Review Again</button>
-            <button id="deckViewSavedBtn" class="secondary-btn">⭐ View Saved Cards</button>
-            <button id="deckBackHomeBtn" class="secondary-btn">🏠 Back to Home Grid</button>
+            <button id="deckRestartBtn" class="primary-btn">🔀 Review Again</button>
+            <button id="deckViewSavedBtn" class="secondary-btn">⭐ Saved Cards</button>
+            <button id="deckBackHomeBtn" class="secondary-btn">🏠 Home</button>
           </div>
         </div>
       </div>
 
       <!-- Bumble / Tinder Action Button Dock -->
       <div class="deck-dock">
-        <button id="dockUndoBtn" class="dock-btn dock-btn-undo" title="Rewind Previous Card (Z)" aria-label="Undo">
+        <button id="dockUndoBtn" class="dock-btn dock-btn-undo" title="Rewind Previous Card" aria-label="Undo">
           <span class="dock-icon">↺</span>
-          <span class="dock-tooltip">Undo (Z)</span>
         </button>
 
-        <button id="dockPassBtn" class="dock-btn dock-btn-pass" title="Pass / Next Post (← Swipe Left)" aria-label="Pass">
+        <button id="dockPassBtn" class="dock-btn dock-btn-pass" title="Next Card (Swipe Left)" aria-label="Pass">
           <span class="dock-icon">✕</span>
-          <span class="dock-tooltip">Pass (←)</span>
         </button>
 
-        <button id="dockShuffleBtn" class="dock-btn dock-btn-shuffle" title="CSPRNG Shuffle Deck" aria-label="Shuffle">
+        <button id="dockShuffleBtn" class="dock-btn dock-btn-shuffle" title="Shuffle Deck" aria-label="Shuffle">
           <span class="dock-icon">🔀</span>
-          <span class="dock-tooltip">Shuffle</span>
         </button>
 
-        <button id="dockLikeBtn" class="dock-btn dock-btn-like" title="Save / Star Post (→ Swipe Right)" aria-label="Save">
-          <span class="dock-icon">⭐</span>
-          <span class="dock-tooltip">Save (→)</span>
+        <button id="dockLikeBtn" class="dock-btn dock-btn-like" title="Save Card (Swipe Right)" aria-label="Save">
+          <span class="dock-icon">❤️</span>
         </button>
 
-        <button id="dockNotesBtn" class="dock-btn dock-btn-notes" title="Lesson Notes & Text (↑ Swipe Up / Space)" aria-label="Notes">
-          <span class="dock-icon">📖</span>
-          <span class="dock-tooltip">Notes (Space)</span>
+        <button id="dockNotesBtn" class="dock-btn dock-btn-notes" title="Lesson Notes" aria-label="Notes">
+          <span class="dock-icon">ℹ️</span>
         </button>
       </div>
 

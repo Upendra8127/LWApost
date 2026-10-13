@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#312e81"/>
+      <stop offset="35%" stop-color="#4f46e5"/>
+      <stop offset="70%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+
+    <!-- Card Gradients -->
+    <linearGradient id="cardFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+
+    <linearGradient id="cardMidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.45)"/>
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.15)"/>
+    </linearGradient>
+
+    <linearGradient id="cardBackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.25)"/>
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)"/>
+    </linearGradient>
+
+    <!-- Accent Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+
+    <!-- Golden Star Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="shadowFront" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#090d16" flood-opacity="0.55"/>
+    </filter>
+
+    <filter id="glowSparkle" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle Canvas (iOS & Android Standard Mask) -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad)"/>
+
+  <!-- Ambient Light Orbs -->
+  <circle cx="120" cy="110" r="130" fill="#ec4899" opacity="0.35"/>
+  <circle cx="410" cy="400" r="160" fill="#6366f1" opacity="0.4"/>
+
+  <!-- Card Stack Layer 1 (Back Deck - Tilted Left) -->
+  <g transform="translate(256, 266) rotate(-14) translate(-256, -266)">
+    <rect x="146" y="116" width="220" height="300" rx="24" fill="url(#cardBackGrad)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  </g>
+
+  <!-- Card Stack Layer 2 (Middle Deck - Tilted Right) -->
+  <g transform="translate(256, 266) rotate(11) translate(-256, -266)">
+    <rect x="146" y="116" width="220" height="300" rx="24" fill="url(#cardMidGrad)" stroke="rgba(255,255,255,0.35)" stroke-width="2.5"/>
+  </g>
+
+  <!-- Card Stack Layer 3 (Hero Front Card - Upright with deep shadow) -->
+  <g filter="url(#shadowFront)">
+    <rect x="146" y="112" width="220" height="304" rx="26" fill="url(#cardFrontGrad)"/>
+
+    <!-- Story/Carousel Progress Bar inside Hero Card -->
+    <rect x="166" y="130" width="40" height="5" rx="2.5" fill="#ec4899"/>
+    <rect x="212" y="130" width="40" height="5" rx="2.5" fill="#8b5cf6"/>
+    <rect x="258" y="130" width="40" height="5" rx="2.5" fill="#cbd5e1"/>
+    <rect x="304" y="130" width="42" height="5" rx="2.5" fill="#e2e8f0"/>
+
+    <!-- Inner Illustration: Stylized Open Vocabulary Book / Card Banner -->
+    <rect x="166" y="148" width="180" height="120" rx="14" fill="url(#accentGrad)"/>
+
+    <!-- Open Book Symbol -->
+    <path d="M 256 182 C 242 174 218 174 196 178 L 196 236 C 218 232 242 232 256 240 C 270 232 294 232 316 236 L 316 178 C 294 174 270 174 256 182 Z" fill="#ffffff" opacity="0.95"/>
+    <line x1="256" y1="182" x2="256" y2="240" stroke="#cbd5e1" stroke-width="2.5"/>
+
+    <!-- Card Content Placeholder Stripes (Simulating clean English flashcard text) -->
+    <rect x="166" y="286" width="130" height="12" rx="6" fill="#1e293b"/>
+    <rect x="166" y="308" width="180" height="8" rx="4" fill="#64748b"/>
+    <rect x="166" y="324" width="150" height="8" rx="4" fill="#94a3b8"/>
+    <rect x="166" y="340" width="168" height="8" rx="4" fill="#cbd5e1"/>
+
+    <!-- Bottom Action Pill inside card -->
+    <rect x="166" y="366" width="70" height="24" rx="12" fill="url(#accentGrad)"/>
+    <circle cx="328" cy="378" r="12" fill="#f1f5f9"/>
+    <path d="M 324 378 L 327 381 L 333 375" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Floating Magic Sparkles (✦) -->
+  <!-- Top Right Big Gold Sparkle -->
+  <g transform="translate(396, 102)" filter="url(#glowSparkle)">
+    <path d="M 0 -28 Q 0 0 28 0 Q 0 0 0 28 Q 0 0 -28 0 Q 0 0 0 -28 Z" fill="url(#goldGrad)"/>
+    <circle cx="0" cy="0" r="5" fill="#ffffff"/>
+  </g>
+
+  <!-- Left Center Sparkle -->
+  <g transform="translate(94, 280)" filter="url(#glowSparkle)">
+    <path d="M 0 -18 Q 0 0 18 0 Q 0 0 0 18 Q 0 0 -18 0 Q 0 0 0 -18 Z" fill="#ffffff" opacity="0.95"/>
+  </g>
+
+  <!-- Bottom Right Mini Sparkle -->
+  <g transform="translate(420, 340)">
+    <path d="M 0 -14 Q 0 0 14 0 Q 0 0 0 14 Q 0 0 -14 0 Q 0 0 0 -14 Z" fill="url(#goldGrad)"/>
+  </g>
+
+  <!-- Monogram Brand Badge (LWA) at bottom center -->
+  <g transform="translate(256, 460)">
+    <rect x="-65" y="-18" width="130" height="34" rx="17" fill="rgba(15, 23, 42, 0.65)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+    <text x="0" y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="800" fill="#ffffff" letter-spacing="2" text-anchor="middle">LWA POST</text>
+  </g>
+</svg>
