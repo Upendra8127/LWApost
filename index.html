@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn with Ashmeet - Visual English Archive</title>
+  <meta name="description" content="Visual learning archive of 220+ English vocabulary, pronunciation, and idioms community post cards from Learn with Ashmeet.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Top Navigation & Branding -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-avatar">📚</div>
+        <div class="brand-text">
+          <h1>Learn with Ashmeet</h1>
+          <p class="subtitle">English Visual Cards Archive</p>
+        </div>
+      </div>
+
+      <!-- Live Sync & Archive Stats -->
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-pill" title="Last automated sync time">
+          <span class="icon">🕒</span>
+          <span class="label">Last Updated:</span>
+          <strong id="statLastUpdated">Syncing...</strong>
+        </div>
+        <div class="stat-pill" title="Total posts in archive">
+          <span class="icon">📖</span>
+          <span class="label">Posts:</span>
+          <strong id="statTotalPosts">--</strong>
+        </div>
+        <div class="stat-pill" title="Total visual cards in archive">
+          <span class="icon">🖼️</span>
+          <span class="label">Cards:</span>
+          <strong id="statTotalCards">--</strong>
+        </div>
+        <div class="stat-pill new-badge-pill" id="statNewPill" title="Filter by new posts" role="button" tabindex="0">
+          <span class="icon">🔥</span>
+          <span class="label">New Posts:</span>
+          <strong id="statNewCount">0</strong>
+        </div>
+      </div>
+
+      <!-- Utility Controls -->
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Dark/Light Mode">
+          <span id="themeIcon">🌙</span>
+        </button>
+        <a href="https://www.youtube.com/@learnwithashmeet" target="_blank" rel="noopener noreferrer" class="btn-yt" title="Visit Channel">
+          ▶ YouTube
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Filter & Search Control Panel -->
+  <div class="controls-wrapper">
+    <div class="controls-container">
+      <!-- Search Input -->
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search vocabulary, phrases, idioms, topics..." autocomplete="off">
+        <button id="clearSearchBtn" class="clear-btn" title="Clear Search" style="display: none;">✕</button>
+      </div>
+
+      <!-- Sort Dropdown -->
+      <div class="select-group">
+        <label for="sortSelect">Sort:</label>
+        <select id="sortSelect">
+          <option value="newest">🔽 Newest First</option>
+          <option value="oldest">🔼 Oldest First</option>
+          <option value="likes">❤️ Most Liked</option>
+          <option value="cards">🃏 Most Cards</option>
+        </select>
+      </div>
+
+      <!-- Calendar / Date Filter Button -->
+      <button id="openDateModalBtn" class="filter-action-btn" title="Filter by Date">
+        📅 <span id="dateFilterBtnText">Filter by Date</span>
+      </button>
+
+      <!-- Quick Preset Filter Tabs -->
+      <div class="filter-tabs" role="tablist">
+        <button class="tab-btn active" data-filter="all">All Posts</button>
+        <button class="tab-btn" data-filter="new" id="tabNewBtn">🔥 New (<span id="tabNewCount">0</span>)</button>
+        <button class="tab-btn" data-filter="bookmarked">⭐ Saved (<span id="tabSavedCount">0</span>)</button>
+        <button class="tab-btn" data-filter="multi">Carousels Only</button>
+      </div>
+    </div>
+
+    <!-- Active Filter Status Bar -->
+    <div class="active-filter-bar" id="activeFilterBar" style="display: none;">
+      <span id="filterDescriptionText">Showing filtered posts</span>
+      <button id="resetAllFiltersBtn" class="reset-link">Reset Filters</button>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <main class="main-container">
+    <div class="grid-header">
+      <h2 id="resultsHeading">All Community Posts</h2>
+      <span class="results-count" id="resultsCount">Loading...</span>
+    </div>
+
+    <div class="cards-grid" id="cardsGrid">
+      <!-- Post items will be safely injected here via Vanilla JS -->
+    </div>
+
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-icon">🔎</div>
+      <h3>No posts found matching your criteria</h3>
+      <p>Try clearing your search terms or adjusting the date range filters.</p>
+      <button class="primary-btn" id="emptyResetBtn">View All Posts</button>
+    </div>
+  </main>
+
+  <!-- Fullscreen Interactive Card Reader Modal -->
+  <div class="reader-modal" id="readerModal" aria-hidden="true" role="dialog">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-dialog">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-post-meta">
+          <span class="badge" id="modalPostOrder">Post #1</span>
+          <span class="meta-date" id="modalPostDate">Published</span>
+          <span class="meta-likes" id="modalPostLikes">❤️ 0</span>
+        </div>
+        <div class="modal-header-actions">
+          <button id="modalBookmarkBtn" class="modal-icon-btn" title="Bookmark Post">⭐</button>
+          <a id="modalYtLink" href="#" target="_blank" rel="noopener noreferrer" class="modal-icon-btn" title="Open on YouTube">↗</a>
+          <button id="closeModalBtn" class="modal-icon-btn close-btn" title="Close Reader (Esc)">✕</button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Split layout: Image Viewer + Caption) -->
+      <div class="modal-body">
+        <div class="viewer-container">
+          <button class="nav-arrow prev-arrow" id="prevCardBtn" aria-label="Previous Card">‹</button>
+          <div class="card-image-wrapper" id="cardImageWrapper">
+            <img id="modalCardImg" src="" alt="Card slide" loading="eager">
+            <div class="image-loader" id="imageLoader">Loading card...</div>
+          </div>
+          <button class="nav-arrow next-arrow" id="nextCardBtn" aria-label="Next Card">›</button>
+
+          <!-- Card Pagination Indicator -->
+          <div class="viewer-footer">
+            <div class="card-dots" id="cardDots"></div>
+            <div class="card-counter" id="cardCounter">Card 1 of 1</div>
+          </div>
+        </div>
+
+        <!-- Sidebar / Caption Panel -->
+        <aside class="caption-panel">
+          <div class="caption-header">
+            <h3>Lesson Notes & Context</h3>
+            <button id="copyCaptionBtn" class="copy-btn" title="Copy text">📋 Copy</button>
+          </div>
+          <div class="caption-content" id="modalCaptionText"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar Date Filter Modal -->
+  <div class="date-modal" id="dateModal" aria-hidden="true">
+    <div class="date-modal-backdrop" id="dateModalBackdrop"></div>
+    <div class="date-modal-dialog">
+      <div class="date-modal-header">
+        <h3>📅 Filter by Calendar Date</h3>
+        <button id="closeDateModalBtn" class="close-btn">✕</button>
+      </div>
+      <div class="date-modal-body">
+        <!-- Quick Presets -->
+        <div class="preset-group">
+          <label>Quick Presets:</label>
+          <div class="preset-chips">
+            <button type="button" class="preset-chip active" data-days="0">All Time</button>
+            <button type="button" class="preset-chip" data-days="1">Today</button>
+            <button type="button" class="preset-chip" data-days="7">Past 7 Days</button>
+            <button type="button" class="preset-chip" data-days="30">Past 30 Days</button>
+            <button type="button" class="preset-chip" data-days="90">Past 3 Months</button>
+            <button type="button" class="preset-chip" data-days="180">Past 6 Months</button>
+          </div>
+        </div>
+
+        <!-- Custom Date Range -->
+        <div class="date-range-inputs">
+          <div class="date-field">
+            <label for="startDateInput">From Date:</label>
+            <input type="date" id="startDateInput">
+          </div>
+          <div class="date-field">
+            <label for="endDateInput">To Date:</label>
+            <input type="date" id="endDateInput">
+          </div>
+        </div>
+      </div>
+      <div class="date-modal-footer">
+        <button id="clearDateFilterBtn" class="secondary-btn">Clear Range</button>
+        <button id="applyDateFilterBtn" class="primary-btn">Apply Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>Educational Visual Archive for <strong>Learn with Ashmeet</strong> • Automated via GitHub Actions Cloud Sync.</p>
+    <p class="sub-credit">OpenSSF Compliant • Zero-Dependency Pure Web Architecture</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

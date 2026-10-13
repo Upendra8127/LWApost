@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software in your research or educational tooling, please cite it as below."
+authors:
+  - family-names: "Yadav"
+    given-names: "Upendra"
+title: "LWApost Archiver: Zero-Dependency YouTube Community Multi-Card Image Archiver"
+version: 1.0.0
+date-released: 2026-10-11
+url: "https://github.com/Upendra8127/LWApost"
+repository-code: "https://github.com/Upendra8127/LWApost"
+license: "MIT"
+keywords:
+  - "youtube"
+  - "community-posts"
+  - "archival"
+  - "image-scraper"
+  - "educational-resources"

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Community Discussions
+    url: https://github.com/Upendra8127/LWApost/discussions
+    about: Ask questions, share ideas, and connect with other users.
+  - name: Security Vulnerabilities
+    url: https://github.com/Upendra8127/LWApost/security/advisories
+    about: Report sensitive security vulnerabilities privately.
+  - name: Documentation & Guidelines
+    url: https://github.com/Upendra8127/LWApost#readme
+    about: Read project architecture, usage guides, and data documentation.

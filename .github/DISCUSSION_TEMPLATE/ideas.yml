@@ -1,0 +1,15 @@
+name: Ideas & Innovations
+description: Share architectural proposals, new ideas, or format requests
+title: "[Idea]: "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: Welcome to the discussions board! Share your creative concepts below.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea Description
+      description: Explain your proposal and why it would benefit the community.
+    validations:
+      required: true

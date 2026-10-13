@@ -1,0 +1,54 @@
+name: Scheduled YouTube Community Posts Auto-Sync
+
+on:
+  schedule:
+    # Runs every 2 days at 04:00 AM UTC (100% Free on GitHub Actions)
+    - cron: '0 4 */2 * *'
+  workflow_dispatch:
+    # Allows manual sync trigger with 1-click in the GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync-posts:
+    name: Sync Latest YouTube Posts & Cards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install Pillow
+
+      - name: Run Incremental Sync Engine
+        run: |
+          python sync_posts.py
+
+      - name: Commit and Push New Cards & Data
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if any new posts or cards were added
+          if [ -n "$(git status --porcelain data/posts.json cards/)" ]; then
+            echo "🔥 New posts detected! Committing changes..."
+            git add data/posts.json cards/
+            git commit -m "chore(sync): auto-append latest community post cards [skip ci]"
+            git push
+            echo "✓ Successfully pushed new posts to repository!"
+          else
+            echo "✓ No changes detected. Archive is up to date."
+          fi

@@ -1,0 +1,27 @@
+name: Performance Issue
+description: Report a download bottleneck, excessive latency, or memory regression
+labels: ["performance"]
+body:
+  - type: markdown
+    attributes:
+      value: Report performance regressions or download bottlenecks.
+  - type: input
+    id: benchmark
+    attributes:
+      label: Download Speed / Elapsed Time Observed
+      placeholder: e.g. 50 MB / min on 100 Mbps fiber
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: System Environment
+      description: OS, CPU, RAM, Network connection specifics.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the Performance Regression
+    validations:
+      required: true

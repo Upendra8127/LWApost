@@ -1,0 +1,16 @@
+{
+  "name": "Learn with Ashmeet - Visual English Archive",
+  "short_name": "LWA English",
+  "description": "Interactive visual archive of English vocabulary, pronunciation, and idioms community post cards from Learn with Ashmeet.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "cards/Post_001_8_hours_ago_Do_you_know_these_everyday_opposite/Card_01.webp",
+      "sizes": "192x192 512x512",
+      "type": "image/webp"
+    }
+  ]
+}

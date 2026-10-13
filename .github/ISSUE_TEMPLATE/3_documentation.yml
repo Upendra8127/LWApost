@@ -1,0 +1,21 @@
+name: Documentation Suggestion
+description: Propose an improvement or correction to documentation
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for helping keep our documentation crisp and accurate!
+  - type: textarea
+    id: page
+    attributes:
+      label: Documentation Page or Section
+      description: Where is the documentation unclear or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Change
+      description: What should the updated documentation say?
+    validations:
+      required: true

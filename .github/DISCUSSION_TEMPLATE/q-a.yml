@@ -1,0 +1,15 @@
+name: Questions & Answers
+description: Ask questions regarding using the archiver or interpreting the dataset
+title: "[Q&A]: "
+labels: ["q&a"]
+body:
+  - type: markdown
+    attributes:
+      value: Ask anything about running the scripts, downloading posts, or data schema.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like help with?
+    validations:
+      required: true

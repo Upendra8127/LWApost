@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Uncompressed raw original downloads (2GB PNGs - kept local, WebP cards/ tracked for GitHub Pages)
+posts/
+
+# System & OS
+.DS_Store
+Thumbs.db
+*.log
