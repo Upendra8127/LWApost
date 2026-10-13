@@ -895,6 +895,38 @@ function renderDeckStack() {
   }
 }
 
+function createStarSvgIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('fill', 'currentColor');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z');
+  svg.appendChild(path);
+  return svg;
+}
+
+function createInfoSvgIcon() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2.2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '10');
+  const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l1.setAttribute('x1', '12'); l1.setAttribute('y1', '16'); l1.setAttribute('x2', '12'); l1.setAttribute('y2', '12');
+  const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l2.setAttribute('x1', '12'); l2.setAttribute('y1', '8'); l2.setAttribute('x2', '12.01'); l2.setAttribute('y2', '8');
+  svg.appendChild(circle); svg.appendChild(l1); svg.appendChild(l2);
+  return svg;
+}
+
 function createSwipeCardElement(item, isTop, depthIndex) {
   const cardEl = document.createElement('div');
   cardEl.className = `swipe-card ${isTop ? 'is-top' : depthIndex === 1 ? 'is-next' : 'is-third'}`;
@@ -920,7 +952,7 @@ function createSwipeCardElement(item, isTop, depthIndex) {
   // Notes drawer trigger icon
   const noteBtn = document.createElement('button');
   noteBtn.className = 'card-note-btn';
-  noteBtn.textContent = 'ℹ️';
+  noteBtn.appendChild(createInfoSvgIcon());
   noteBtn.title = 'View lesson notes';
   noteBtn.setAttribute('aria-label', 'Lesson Notes');
   noteBtn.addEventListener('click', (e) => {
@@ -932,7 +964,7 @@ function createSwipeCardElement(item, isTop, depthIndex) {
   // Bookmark Star icon
   const starBtn = document.createElement('button');
   starBtn.className = `card-star-btn ${state.bookmarks.has(item.post.postId) ? 'active' : ''}`;
-  starBtn.textContent = '⭐';
+  starBtn.appendChild(createStarSvgIcon());
   starBtn.title = 'Bookmark post';
   starBtn.setAttribute('aria-label', 'Bookmark');
   starBtn.addEventListener('click', (e) => {
@@ -1002,14 +1034,22 @@ function bindCardDragPhysics(cardEl, item) {
 
       if (elements.stampLike && elements.stampPass) {
         if (deltaX > 20) {
-          elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 60);
+          const progress = Math.min(1, (deltaX - 20) / 60);
+          elements.stampLike.style.opacity = progress;
+          elements.stampLike.style.transform = `scale(${0.85 + progress * 0.22}) rotate(-10deg)`;
           elements.stampPass.style.opacity = 0;
+          elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
         } else if (deltaX < -20) {
-          elements.stampPass.style.opacity = Math.min(1, (-deltaX - 20) / 60);
+          const progress = Math.min(1, (-deltaX - 20) / 60);
+          elements.stampPass.style.opacity = progress;
+          elements.stampPass.style.transform = `scale(${0.85 + progress * 0.22}) rotate(10deg)`;
           elements.stampLike.style.opacity = 0;
+          elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
         } else {
           elements.stampLike.style.opacity = 0;
+          elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
           elements.stampPass.style.opacity = 0;
+          elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
         }
       }
     }
@@ -1021,8 +1061,14 @@ function bindCardDragPhysics(cardEl, item) {
     cardEl.classList.remove('is-dragging');
 
     try { cardEl.releasePointerCapture(e.pointerId); } catch (err) {}
-    if (elements.stampLike) elements.stampLike.style.opacity = 0;
-    if (elements.stampPass) elements.stampPass.style.opacity = 0;
+    if (elements.stampLike) {
+      elements.stampLike.style.opacity = 0;
+      elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
+    }
+    if (elements.stampPass) {
+      elements.stampPass.style.opacity = 0;
+      elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
+    }
 
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
@@ -1092,11 +1138,22 @@ function bindCardDragPhysics(cardEl, item) {
 
       if (elements.stampLike && elements.stampPass) {
         if (deltaX > 20) {
-          elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 60);
+          const progress = Math.min(1, (deltaX - 20) / 60);
+          elements.stampLike.style.opacity = progress;
+          elements.stampLike.style.transform = `scale(${0.85 + progress * 0.22}) rotate(-10deg)`;
           elements.stampPass.style.opacity = 0;
+          elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
         } else if (deltaX < -20) {
-          elements.stampPass.style.opacity = Math.min(1, (-deltaX - 20) / 60);
+          const progress = Math.min(1, (-deltaX - 20) / 60);
+          elements.stampPass.style.opacity = progress;
+          elements.stampPass.style.transform = `scale(${0.85 + progress * 0.22}) rotate(10deg)`;
           elements.stampLike.style.opacity = 0;
+          elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
+        } else {
+          elements.stampLike.style.opacity = 0;
+          elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
+          elements.stampPass.style.opacity = 0;
+          elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
         }
       }
     }
@@ -1106,8 +1163,14 @@ function bindCardDragPhysics(cardEl, item) {
     if (!isDragging) return;
     isDragging = false;
     cardEl.classList.remove('is-dragging');
-    if (elements.stampLike) elements.stampLike.style.opacity = 0;
-    if (elements.stampPass) elements.stampPass.style.opacity = 0;
+    if (elements.stampLike) {
+      elements.stampLike.style.opacity = 0;
+      elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
+    }
+    if (elements.stampPass) {
+      elements.stampPass.style.opacity = 0;
+      elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
+    }
 
     const deltaX = currentX - startX;
     const deltaY = currentY - startY;
@@ -1188,12 +1251,24 @@ function swipeFlyAndAdvance(action, cardEl, deltaX = 0, deltaY = 0) {
   if (action === 'like') {
     if (elements.stampLike) {
       elements.stampLike.style.opacity = 1;
-      setTimeout(() => { if (elements.stampLike) elements.stampLike.style.opacity = 0; }, 180);
+      elements.stampLike.style.transform = 'scale(1.08) rotate(-10deg)';
+      setTimeout(() => {
+        if (elements.stampLike) {
+          elements.stampLike.style.opacity = 0;
+          elements.stampLike.style.transform = 'scale(0.85) rotate(-10deg)';
+        }
+      }, 180);
     }
   } else if (action === 'pass') {
     if (elements.stampPass) {
       elements.stampPass.style.opacity = 1;
-      setTimeout(() => { if (elements.stampPass) elements.stampPass.style.opacity = 0; }, 180);
+      elements.stampPass.style.transform = 'scale(1.08) rotate(10deg)';
+      setTimeout(() => {
+        if (elements.stampPass) {
+          elements.stampPass.style.opacity = 0;
+          elements.stampPass.style.transform = 'scale(0.85) rotate(10deg)';
+        }
+      }, 180);
     }
   }
 

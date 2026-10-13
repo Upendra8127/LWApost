@@ -29,7 +29,7 @@ describe('PWA Logo, Icons & Auto-Update Validation', () => {
 
   test('sw.js features cache invalidation, skipWaiting, and clients.claim', () => {
     const sw = fs.readFileSync(path.resolve('sw.js'), 'utf8');
-    assert.ok(sw.includes('lwa-archive-v3.0'), 'Service worker cache must be updated to v3.0');
+    assert.ok(sw.includes('lwa-archive-v3.1'), 'Service worker cache must be updated to v3.1');
     assert.ok(sw.includes('skipWaiting()'), 'Must call skipWaiting for instant activation');
     assert.ok(sw.includes('clients.claim()'), 'Must claim clients immediately');
   });
@@ -117,4 +117,19 @@ describe('Magic Mode Minimalist UI & Search Accuracy Validation', () => {
     next(); // Wraps cleanly to Post 1, Card 1!
     assert.equal(postIdx, 0); assert.equal(cardIdx, 0);
   });
+
+  test('Swipe stamps feature vector SVGs and safe vertical clearance from star button', () => {
+    const html = fs.readFileSync(path.resolve('index.html'), 'utf8');
+    assert.ok(html.includes('class="stamp-svg"'), 'Stamp overlay must feature vector SVGs');
+    assert.ok(html.includes('id="stampPass"'), 'Stamp pass element must exist');
+    assert.ok(html.includes('id="stampLike"'), 'Stamp like element must exist');
+
+    const css = fs.readFileSync(path.resolve('styles.css'), 'utf8');
+    // Ensure stampPass top offset is >= 75px so it never overlaps the top-20px corner star button
+    const passTopMatch = css.match(/\.stamp-pass\s*\{[^}]*top:\s*(\d+)px/);
+    assert.ok(passTopMatch, 'stamp-pass must have an explicit top pixel offset');
+    const passTop = parseInt(passTopMatch[1], 10);
+    assert.ok(passTop >= 75, `stamp-pass top offset (${passTop}px) must provide clearance below corner controls`);
+  });
 });
+
