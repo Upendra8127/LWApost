@@ -22,7 +22,115 @@ const state = {
   activePost: null,
   activeCardIndex: 0,
   theme: 'dark',
+  // Tinder / Bumble Magic Swipe Deck State
+  viewMode: 'grid', // 'grid' | 'swipe'
+  swipeDeck: [],
+  swipeDeckIndex: 0,
+  swipeSubCardIndex: 0,
+  swipeHistory: [],
+  soundEnabled: true,
 };
+
+// Cryptographic Randomness Generator (Tier-1 Standard)
+function getCryptoRandom() {
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    const buf = new Uint32Array(1);
+    window.crypto.getRandomValues(buf);
+    return buf[0] / 4294967296;
+  }
+  return Math.random();
+}
+
+function cryptoShuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(getCryptoRandom() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Pure Web Audio API Synthesizer (Zero runtime audio files / npm dependencies)
+class DeckSoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+
+  init() {
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  playSwoosh() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(380, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.16);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.16);
+    } catch (e) {}
+  }
+
+  playChime() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      [523.25, 659.25, 783.99].forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        const start = now + idx * 0.05;
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.12, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.3);
+      });
+    } catch (e) {}
+  }
+
+  playPop() {
+    if (!this.enabled) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(750, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.06);
+      gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.06);
+    } catch (e) {}
+  }
+}
+
+const sounds = new DeckSoundEngine();
 
 // DOM Elements
 const elements = {
@@ -50,6 +158,49 @@ const elements = {
   cardsGrid: document.getElementById('cardsGrid'),
   emptyState: document.getElementById('emptyState'),
   emptyResetBtn: document.getElementById('emptyResetBtn'),
+  controlsWrapper: document.querySelector('.controls-wrapper'),
+  gridMainContainer: document.getElementById('gridMainContainer'),
+  // Navigation & Mode Switching
+  viewHomeBtn: document.getElementById('viewHomeBtn'),
+  viewSwipeBtn: document.getElementById('viewSwipeBtn'),
+  gridLaunchSwipeBtn: document.getElementById('gridLaunchSwipeBtn'),
+  // Magic Swipe Deck Elements
+  swipeModeSection: document.getElementById('swipeModeSection'),
+  deckHomeBtn: document.getElementById('deckHomeBtn'),
+  deckCounterText: document.getElementById('deckCounterText'),
+  soundToggleBtn: document.getElementById('soundToggleBtn'),
+  soundIcon: document.getElementById('soundIcon'),
+  deckHelpBtn: document.getElementById('deckHelpBtn'),
+  cardStack: document.getElementById('cardStack'),
+  stampLike: document.getElementById('stampLike'),
+  stampPass: document.getElementById('stampPass'),
+  stampNotes: document.getElementById('stampNotes'),
+  deckCompleted: document.getElementById('deckCompleted'),
+  deckRestartBtn: document.getElementById('deckRestartBtn'),
+  deckViewSavedBtn: document.getElementById('deckViewSavedBtn'),
+  deckBackHomeBtn: document.getElementById('deckBackHomeBtn'),
+  // Dock Action Buttons
+  dockUndoBtn: document.getElementById('dockUndoBtn'),
+  dockPassBtn: document.getElementById('dockPassBtn'),
+  dockShuffleBtn: document.getElementById('dockShuffleBtn'),
+  dockLikeBtn: document.getElementById('dockLikeBtn'),
+  dockNotesBtn: document.getElementById('dockNotesBtn'),
+  // Lesson Notes Drawer
+  deckNotesDrawer: document.getElementById('deckNotesDrawer'),
+  drawerBackdrop: document.getElementById('drawerBackdrop'),
+  drawerPostOrder: document.getElementById('drawerPostOrder'),
+  drawerPostHeading: document.getElementById('drawerPostHeading'),
+  drawerPostText: document.getElementById('drawerPostText'),
+  drawerPostLikes: document.getElementById('drawerPostLikes'),
+  drawerPostDate: document.getElementById('drawerPostDate'),
+  drawerYtLink: document.getElementById('drawerYtLink'),
+  drawerCopyBtn: document.getElementById('drawerCopyBtn'),
+  drawerCloseBtn: document.getElementById('drawerCloseBtn'),
+  // Help Modal
+  deckHelpModal: document.getElementById('deckHelpModal'),
+  deckHelpBackdrop: document.getElementById('deckHelpBackdrop'),
+  closeDeckHelpBtn: document.getElementById('closeDeckHelpBtn'),
+  gotItHelpBtn: document.getElementById('gotItHelpBtn'),
   // Reader Modal
   readerModal: document.getElementById('readerModal'),
   modalBackdrop: document.getElementById('modalBackdrop'),
@@ -383,6 +534,18 @@ function renderGrid() {
     typeSpan.textContent = post.type === 'multi_image' ? 'Carousel' : 'Graphic';
     footerEl.appendChild(typeSpan);
 
+    const swipeBtn = document.createElement('button');
+    swipeBtn.className = 'grid-card-swipe-btn';
+    swipeBtn.textContent = '✨ Swipe';
+    swipeBtn.title = 'Open this post in Magic Swipe Mode';
+    swipeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postIdx = state.filteredPosts.indexOf(post);
+      switchViewMode('swipe');
+      initSwipeDeck(postIdx >= 0 ? postIdx : 0);
+    });
+    footerEl.appendChild(swipeBtn);
+
     bodyEl.appendChild(footerEl);
     cardEl.appendChild(bodyEl);
 
@@ -572,8 +735,541 @@ function closeDateModal() {
   elements.dateModal.setAttribute('aria-hidden', 'true');
 }
 
+// ==========================================================================
+// Tinder / Bumble Magic Swipe Deck Engine
+// ==========================================================================
+
+function switchViewMode(mode) {
+  state.viewMode = mode;
+  if (mode === 'swipe') {
+    if (elements.gridMainContainer) elements.gridMainContainer.style.display = 'none';
+    if (elements.controlsWrapper) elements.controlsWrapper.style.display = 'none';
+    if (elements.swipeModeSection) elements.swipeModeSection.style.display = 'flex';
+    if (elements.viewHomeBtn) elements.viewHomeBtn.classList.remove('active');
+    if (elements.viewSwipeBtn) elements.viewSwipeBtn.classList.add('active');
+    initSwipeDeck();
+  } else {
+    if (elements.swipeModeSection) elements.swipeModeSection.style.display = 'none';
+    if (elements.gridMainContainer) elements.gridMainContainer.style.display = 'block';
+    if (elements.controlsWrapper) elements.controlsWrapper.style.display = 'block';
+    if (elements.viewHomeBtn) elements.viewHomeBtn.classList.add('active');
+    if (elements.viewSwipeBtn) elements.viewSwipeBtn.classList.remove('active');
+  }
+}
+
+function initSwipeDeck(startPostIndex = 0) {
+  const source = state.filteredPosts && state.filteredPosts.length > 0 ? state.filteredPosts : state.allPosts;
+  state.swipeDeck = [...source];
+  state.swipeDeckIndex = Math.min(Math.max(0, startPostIndex), state.swipeDeck.length);
+  state.swipeSubCardIndex = 0;
+  state.swipeHistory = [];
+  renderDeckStack();
+}
+
+function renderDeckStack() {
+  if (!elements.cardStack) return;
+  elements.cardStack.textContent = ''; // safe clear
+
+  const total = state.swipeDeck.length;
+  const currentIdx = state.swipeDeckIndex;
+
+  if (elements.deckCounterText) {
+    if (currentIdx >= total) {
+      elements.deckCounterText.textContent = `Completed (${total}/${total})`;
+    } else {
+      elements.deckCounterText.textContent = `Card ${currentIdx + 1} of ${total}`;
+    }
+  }
+
+  // If all cards in deck swiped
+  if (currentIdx >= total) {
+    if (elements.deckCompleted) elements.deckCompleted.style.display = 'flex';
+    return;
+  }
+
+  if (elements.deckCompleted) elements.deckCompleted.style.display = 'none';
+
+  // Render up to 3 cards in stack (Top = 0, Next = 1, Third = 2)
+  const stackSlice = state.swipeDeck.slice(currentIdx, currentIdx + 3);
+
+  // Append in reverse order so top card is top DOM child
+  for (let i = stackSlice.length - 1; i >= 0; i--) {
+    const post = stackSlice[i];
+    const isTop = i === 0;
+    const cardEl = createSwipeCardElement(post, isTop, i);
+    elements.cardStack.appendChild(cardEl);
+
+    if (isTop) {
+      bindCardDragPhysics(cardEl, post);
+    }
+  }
+}
+
+function createSwipeCardElement(post, isTop, depthIndex) {
+  const cardEl = document.createElement('div');
+  cardEl.className = `swipe-card ${isTop ? 'is-top' : depthIndex === 1 ? 'is-next' : 'is-third'}`;
+  cardEl.dataset.postId = post.postId;
+
+  const cards = post.cards || [];
+  const numCards = cards.length;
+  const activeSubIndex = isTop ? state.swipeSubCardIndex : 0;
+  const currentCardData = cards[activeSubIndex] || cards[0];
+
+  // Story Indicator Progress Bars (Instagram / Bumble style)
+  if (numCards > 1) {
+    const storyBars = document.createElement('div');
+    storyBars.className = 'story-bars';
+    for (let c = 0; c < numCards; c++) {
+      const bar = document.createElement('div');
+      bar.className = `story-bar ${c === activeSubIndex ? 'active' : ''}`;
+      storyBars.appendChild(bar);
+    }
+    cardEl.appendChild(storyBars);
+  }
+
+  // Header Overlay Pills
+  const headerOverlay = document.createElement('div');
+  headerOverlay.className = 'card-header-overlay';
+
+  const pillsGroup = document.createElement('div');
+  pillsGroup.className = 'card-pills-group';
+
+  const orderBadge = document.createElement('span');
+  orderBadge.className = 'card-badge-order';
+  orderBadge.textContent = `Post #${post.order}`;
+  pillsGroup.appendChild(orderBadge);
+
+  if (numCards > 1) {
+    const countBadge = document.createElement('span');
+    countBadge.className = 'card-badge-count';
+    countBadge.textContent = `🃏 ${activeSubIndex + 1}/${numCards}`;
+    pillsGroup.appendChild(countBadge);
+  }
+
+  headerOverlay.appendChild(pillsGroup);
+
+  // Star / Bookmark Button
+  const starBtn = document.createElement('button');
+  starBtn.className = `card-star-btn ${state.bookmarks.has(post.postId) ? 'active' : ''}`;
+  starBtn.textContent = '⭐';
+  starBtn.title = 'Bookmark this post';
+  starBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleBookmark(post.postId);
+    starBtn.classList.toggle('active', state.bookmarks.has(post.postId));
+    sounds.playChime();
+  });
+  headerOverlay.appendChild(starBtn);
+  cardEl.appendChild(headerOverlay);
+
+  // Card Image Container
+  const imageBox = document.createElement('div');
+  imageBox.className = 'card-image-box';
+
+  const img = document.createElement('img');
+  img.src = currentCardData ? currentCardData.webpUrl : 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23334155"><rect width="100%" height="100%"/></svg>';
+  img.alt = `Card for Post #${post.order}`;
+  img.loading = isTop ? 'eager' : 'lazy';
+  if (currentCardData && currentCardData.fallbackUrl) {
+    img.onerror = () => { img.src = currentCardData.fallbackUrl; };
+  }
+  imageBox.appendChild(img);
+
+  // Tap Zones for Carousel navigation
+  if (isTop && numCards > 1) {
+    const tapLeft = document.createElement('div');
+    tapLeft.className = 'tap-zone tap-zone-left';
+    tapLeft.title = 'Previous card';
+    tapLeft.addEventListener('click', (e) => {
+      e.stopPropagation();
+      prevSlideInDeckPost();
+    });
+
+    const tapRight = document.createElement('div');
+    tapRight.className = 'tap-zone tap-zone-right';
+    tapRight.title = 'Next card';
+    tapRight.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nextSlideInDeckPost();
+    });
+
+    imageBox.appendChild(tapLeft);
+    imageBox.appendChild(tapRight);
+  }
+
+  cardEl.appendChild(imageBox);
+
+  // Bottom Info Overlay
+  const infoOverlay = document.createElement('div');
+  infoOverlay.className = 'card-info-overlay';
+
+  const snippet = document.createElement('p');
+  snippet.className = 'card-text-snippet';
+  snippet.textContent = post.text ? post.text.slice(0, 140) : 'English Visual Study Card';
+  infoOverlay.appendChild(snippet);
+
+  const actionBar = document.createElement('div');
+  actionBar.className = 'card-action-bar';
+
+  const likesSpan = document.createElement('span');
+  likesSpan.textContent = `❤️ ${post.likes || '0'} • ${post.publishedTime || formatDate(post.publishedDateISO)}`;
+  actionBar.appendChild(likesSpan);
+
+  const notesBtn = document.createElement('button');
+  notesBtn.className = 'deck-open-notes-btn';
+  notesBtn.textContent = '📖 Notes';
+  notesBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openDeckNotes(post);
+  });
+  actionBar.appendChild(notesBtn);
+
+  infoOverlay.appendChild(actionBar);
+  cardEl.appendChild(infoOverlay);
+
+  return cardEl;
+}
+
+function bindCardDragPhysics(cardEl, post) {
+  let isPointerDown = false;
+  let startX = 0;
+  let startY = 0;
+  let currentX = 0;
+  let currentY = 0;
+
+  const onPointerDown = (e) => {
+    if (e.target.closest('button') || e.target.closest('.tap-zone')) return;
+
+    isPointerDown = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    currentX = startX;
+    currentY = startY;
+
+    cardEl.classList.add('is-dragging');
+    try {
+      cardEl.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const onPointerMove = (e) => {
+    if (!isPointerDown) return;
+
+    currentX = e.clientX;
+    currentY = e.clientY;
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+
+    // Dynamic rotation: 0.08 deg per px
+    const rotation = deltaX * 0.08;
+    cardEl.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotate(${rotation}deg)`;
+
+    // Update floating stamps
+    if (elements.stampLike && elements.stampPass && elements.stampNotes) {
+      if (deltaX > 20) {
+        elements.stampLike.style.opacity = Math.min(1, (deltaX - 20) / 70);
+        elements.stampPass.style.opacity = 0;
+        elements.stampNotes.style.opacity = 0;
+      } else if (deltaX < -20) {
+        elements.stampPass.style.opacity = Math.min(1, (-deltaX - 20) / 70);
+        elements.stampLike.style.opacity = 0;
+        elements.stampNotes.style.opacity = 0;
+      } else if (deltaY < -30 && Math.abs(deltaX) < 50) {
+        elements.stampNotes.style.opacity = Math.min(1, (-deltaY - 30) / 70);
+        elements.stampLike.style.opacity = 0;
+        elements.stampPass.style.opacity = 0;
+      } else {
+        elements.stampLike.style.opacity = 0;
+        elements.stampPass.style.opacity = 0;
+        elements.stampNotes.style.opacity = 0;
+      }
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (!isPointerDown) return;
+    isPointerDown = false;
+    cardEl.classList.remove('is-dragging');
+
+    try {
+      cardEl.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+
+    // Reset stamps
+    if (elements.stampLike) elements.stampLike.style.opacity = 0;
+    if (elements.stampPass) elements.stampPass.style.opacity = 0;
+    if (elements.stampNotes) elements.stampNotes.style.opacity = 0;
+
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+
+    // Swipe Threshold: 90px horizontal or drag up
+    if (deltaX > 90) {
+      swipeCardAction('like', cardEl, post, deltaX, deltaY);
+    } else if (deltaX < -90) {
+      swipeCardAction('pass', cardEl, post, deltaX, deltaY);
+    } else if (deltaY < -100 && Math.abs(deltaX) < 60) {
+      cardEl.style.transform = '';
+      openDeckNotes(post);
+    } else {
+      cardEl.style.transform = '';
+    }
+  };
+
+  cardEl.addEventListener('pointerdown', onPointerDown);
+  cardEl.addEventListener('pointermove', onPointerMove);
+  cardEl.addEventListener('pointerup', onPointerUp);
+  cardEl.addEventListener('pointercancel', onPointerUp);
+}
+
+function swipeCardAction(action, cardEl = null, post = null, deltaX = 0, deltaY = 0) {
+  if (state.swipeDeckIndex >= state.swipeDeck.length) return;
+
+  const currentPost = post || state.swipeDeck[state.swipeDeckIndex];
+  const activeEl = cardEl || elements.cardStack?.querySelector('.swipe-card.is-top');
+
+  // Push to history for undo
+  state.swipeHistory.push({
+    post: currentPost,
+    action: action,
+    index: state.swipeDeckIndex,
+    subCardIndex: state.swipeSubCardIndex,
+  });
+
+  if (action === 'like') {
+    state.bookmarks.add(currentPost.postId);
+    saveBookmarks();
+    sounds.playChime();
+    if (elements.stampLike) {
+      elements.stampLike.style.opacity = 1;
+      setTimeout(() => { if (elements.stampLike) elements.stampLike.style.opacity = 0; }, 200);
+    }
+    if (activeEl) {
+      activeEl.style.transform = `translate3d(1200px, ${deltaY || 30}px, 0) rotate(35deg)`;
+      activeEl.style.opacity = '0';
+    }
+  } else if (action === 'pass') {
+    sounds.playSwoosh();
+    if (elements.stampPass) {
+      elements.stampPass.style.opacity = 1;
+      setTimeout(() => { if (elements.stampPass) elements.stampPass.style.opacity = 0; }, 200);
+    }
+    if (activeEl) {
+      activeEl.style.transform = `translate3d(-1200px, ${deltaY || 30}px, 0) rotate(-35deg)`;
+      activeEl.style.opacity = '0';
+    }
+  }
+
+  state.swipeDeckIndex++;
+  state.swipeSubCardIndex = 0;
+
+  setTimeout(() => {
+    renderDeckStack();
+  }, 220);
+}
+
+function undoSwipe() {
+  if (state.swipeHistory.length === 0) return;
+  const last = state.swipeHistory.pop();
+  state.swipeDeckIndex = last.index;
+  state.swipeSubCardIndex = last.subCardIndex || 0;
+  sounds.playPop();
+  renderDeckStack();
+}
+
+function shuffleDeck() {
+  if (state.swipeDeckIndex >= state.swipeDeck.length) {
+    state.swipeDeck = cryptoShuffle(state.allPosts);
+    state.swipeDeckIndex = 0;
+  } else {
+    const completed = state.swipeDeck.slice(0, state.swipeDeckIndex);
+    const remaining = cryptoShuffle(state.swipeDeck.slice(state.swipeDeckIndex));
+    state.swipeDeck = [...completed, ...remaining];
+  }
+  state.swipeSubCardIndex = 0;
+  sounds.playPop();
+  renderDeckStack();
+}
+
+function nextSlideInDeckPost() {
+  const post = state.swipeDeck[state.swipeDeckIndex];
+  if (!post || !post.cards || post.cards.length <= 1) return;
+  state.swipeSubCardIndex = (state.swipeSubCardIndex + 1) % post.cards.length;
+  sounds.playPop();
+  updateTopCardSubSlide(post);
+}
+
+function prevSlideInDeckPost() {
+  const post = state.swipeDeck[state.swipeDeckIndex];
+  if (!post || !post.cards || post.cards.length <= 1) return;
+  state.swipeSubCardIndex = (state.swipeSubCardIndex - 1 + post.cards.length) % post.cards.length;
+  sounds.playPop();
+  updateTopCardSubSlide(post);
+}
+
+function updateTopCardSubSlide(post) {
+  const topCard = elements.cardStack?.querySelector('.swipe-card.is-top');
+  if (!topCard) return;
+
+  const cards = post.cards || [];
+  const currentCard = cards[state.swipeSubCardIndex];
+  const img = topCard.querySelector('img');
+  if (img && currentCard) {
+    img.src = currentCard.webpUrl;
+  }
+
+  // Update story bars
+  const bars = topCard.querySelectorAll('.story-bar');
+  bars.forEach((bar, idx) => {
+    bar.classList.toggle('active', idx === state.swipeSubCardIndex);
+  });
+
+  // Update badge count
+  const countBadge = topCard.querySelector('.card-badge-count');
+  if (countBadge) {
+    countBadge.textContent = `🃏 ${state.swipeSubCardIndex + 1}/${cards.length}`;
+  }
+}
+
+// Notes Drawer & Modals
+function openDeckNotes(post = null) {
+  const targetPost = post || state.swipeDeck[state.swipeDeckIndex];
+  if (!targetPost) return;
+
+  if (elements.drawerPostOrder) elements.drawerPostOrder.textContent = `Post #${targetPost.order}`;
+  if (elements.drawerPostText) elements.drawerPostText.textContent = targetPost.text || 'No lesson context or caption for this post.';
+  if (elements.drawerPostLikes) elements.drawerPostLikes.textContent = `❤️ ${targetPost.likes || '0'} likes`;
+  if (elements.drawerPostDate) elements.drawerPostDate.textContent = targetPost.publishedTime || formatDate(targetPost.publishedDateISO);
+  if (elements.drawerYtLink) elements.drawerYtLink.href = targetPost.postUrl || '#';
+
+  if (elements.deckNotesDrawer) {
+    elements.deckNotesDrawer.classList.add('active');
+    elements.deckNotesDrawer.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function closeDeckNotes() {
+  if (elements.deckNotesDrawer) {
+    elements.deckNotesDrawer.classList.remove('active');
+    elements.deckNotesDrawer.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openDeckHelp() {
+  if (elements.deckHelpModal) {
+    elements.deckHelpModal.classList.add('active');
+    elements.deckHelpModal.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function closeDeckHelp() {
+  if (elements.deckHelpModal) {
+    elements.deckHelpModal.classList.remove('active');
+    elements.deckHelpModal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function toggleSound() {
+  sounds.enabled = !sounds.enabled;
+  state.soundEnabled = sounds.enabled;
+  if (elements.soundIcon) {
+    elements.soundIcon.textContent = sounds.enabled ? '🔊' : '🔇';
+  }
+  if (sounds.enabled) sounds.playPop();
+}
+
+// ==========================================================================
 // Event Listeners
+// ==========================================================================
 function attachEventListeners() {
+  // View Mode Switcher
+  if (elements.viewHomeBtn) {
+    elements.viewHomeBtn.addEventListener('click', () => switchViewMode('grid'));
+  }
+  if (elements.viewSwipeBtn) {
+    elements.viewSwipeBtn.addEventListener('click', () => switchViewMode('swipe'));
+  }
+  if (elements.gridLaunchSwipeBtn) {
+    elements.gridLaunchSwipeBtn.addEventListener('click', () => switchViewMode('swipe'));
+  }
+
+  // Deck Top Bar Controls
+  if (elements.deckHomeBtn) {
+    elements.deckHomeBtn.addEventListener('click', () => switchViewMode('grid'));
+  }
+  if (elements.soundToggleBtn) {
+    elements.soundToggleBtn.addEventListener('click', toggleSound);
+  }
+  if (elements.deckHelpBtn) {
+    elements.deckHelpBtn.addEventListener('click', openDeckHelp);
+  }
+  if (elements.closeDeckHelpBtn) {
+    elements.closeDeckHelpBtn.addEventListener('click', closeDeckHelp);
+  }
+  if (elements.deckHelpBackdrop) {
+    elements.deckHelpBackdrop.addEventListener('click', closeDeckHelp);
+  }
+  if (elements.gotItHelpBtn) {
+    elements.gotItHelpBtn.addEventListener('click', closeDeckHelp);
+  }
+
+  // Completed Deck Actions
+  if (elements.deckRestartBtn) {
+    elements.deckRestartBtn.addEventListener('click', shuffleDeck);
+  }
+  if (elements.deckViewSavedBtn) {
+    elements.deckViewSavedBtn.addEventListener('click', () => {
+      state.activeTab = 'bookmarked';
+      elements.filterTabs.forEach((t) => t.classList.toggle('active', t.dataset.filter === 'bookmarked'));
+      applyFilters();
+      switchViewMode('grid');
+    });
+  }
+  if (elements.deckBackHomeBtn) {
+    elements.deckBackHomeBtn.addEventListener('click', () => switchViewMode('grid'));
+  }
+
+  // Bumble / Tinder Dock Action Buttons
+  if (elements.dockUndoBtn) {
+    elements.dockUndoBtn.addEventListener('click', undoSwipe);
+  }
+  if (elements.dockPassBtn) {
+    elements.dockPassBtn.addEventListener('click', () => swipeCardAction('pass'));
+  }
+  if (elements.dockShuffleBtn) {
+    elements.dockShuffleBtn.addEventListener('click', shuffleDeck);
+  }
+  if (elements.dockLikeBtn) {
+    elements.dockLikeBtn.addEventListener('click', () => swipeCardAction('like'));
+  }
+  if (elements.dockNotesBtn) {
+    elements.dockNotesBtn.addEventListener('click', () => openDeckNotes());
+  }
+
+  // Lesson Notes Drawer Controls
+  if (elements.drawerCloseBtn) {
+    elements.drawerCloseBtn.addEventListener('click', closeDeckNotes);
+  }
+  if (elements.drawerBackdrop) {
+    elements.drawerBackdrop.addEventListener('click', closeDeckNotes);
+  }
+  if (elements.drawerCopyBtn) {
+    elements.drawerCopyBtn.addEventListener('click', async () => {
+      const text = elements.drawerPostText?.textContent;
+      if (text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          elements.drawerCopyBtn.textContent = '✓ Copied!';
+          setTimeout(() => {
+            elements.drawerCopyBtn.textContent = '📋 Copy Notes';
+          }, 1800);
+        } catch (err) {
+          console.error('Failed to copy drawer notes:', err);
+        }
+      }
+    });
+  }
+
   // Theme toggle
   elements.themeToggleBtn.addEventListener('click', toggleTheme);
 
@@ -653,14 +1349,59 @@ function attachEventListeners() {
     }
   });
 
-  // Keyboard navigation
+  // Global Keyboard navigation
   window.addEventListener('keydown', (e) => {
+    // If typing in search box, do not trigger deck shortcuts
+    if (e.target === elements.searchInput) return;
+
+    // 1. Reader Modal shortcuts
     if (elements.readerModal.classList.contains('active')) {
       if (e.key === 'Escape') closeReaderModal();
       if (e.key === 'ArrowRight') nextCard();
       if (e.key === 'ArrowLeft') prevCard();
-    } else if (elements.dateModal.classList.contains('active')) {
+      return;
+    }
+
+    // 2. Date Modal shortcuts
+    if (elements.dateModal.classList.contains('active')) {
       if (e.key === 'Escape') closeDateModal();
+      return;
+    }
+
+    // 3. Deck Notes Drawer / Help Modal shortcuts
+    if (elements.deckNotesDrawer?.classList.contains('active')) {
+      if (e.key === 'Escape') closeDeckNotes();
+      return;
+    }
+    if (elements.deckHelpModal?.classList.contains('active')) {
+      if (e.key === 'Escape') closeDeckHelp();
+      return;
+    }
+
+    // 4. Magic Swipe Mode shortcuts
+    if (state.viewMode === 'swipe') {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        swipeCardAction('pass');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        swipeCardAction('like');
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        openDeckNotes();
+      } else if (e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault();
+        nextSlideInDeckPost();
+      } else if (e.key === 'z' || e.key === 'Z') {
+        e.preventDefault();
+        undoSwipe();
+      } else if (e.key === 'h' || e.key === 'H' || e.key === 'Escape') {
+        e.preventDefault();
+        switchViewMode('grid');
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        toggleSound();
+      }
     }
   });
 
@@ -732,3 +1473,4 @@ function attachEventListeners() {
     applyFilters();
   });
 }
+

@@ -110,6 +110,22 @@ describe('Web Reader Application & PWA Assets', () => {
     assert.ok(html.includes('id="readerModal"'), 'Must have card reader modal');
     assert.ok(html.includes('id="sortSelect"'), 'Must have sort options');
   });
+
+  test('Tinder & Bumble Magic Swipe Mode deck components exist and are wired', () => {
+    const html = fs.readFileSync(path.resolve('index.html'), 'utf8');
+    assert.ok(html.includes('id="viewHomeBtn"'), 'Must have Home View button');
+    assert.ok(html.includes('id="viewSwipeBtn"'), 'Must have Magic Swipe button');
+    assert.ok(html.includes('id="swipeModeSection"'), 'Must have Swipe Mode Section');
+    assert.ok(html.includes('id="cardStack"'), 'Must have 3D Card Stack');
+    assert.ok(html.includes('id="dockLikeBtn"'), 'Must have Like/Save action button');
+    assert.ok(html.includes('id="dockPassBtn"'), 'Must have Pass/Skip action button');
+    assert.ok(html.includes('id="deckNotesDrawer"'), 'Must have Deck Notes Drawer');
+
+    const js = fs.readFileSync(path.resolve('app.js'), 'utf8');
+    assert.ok(js.includes('class DeckSoundEngine'), 'Must have Web Audio sound engine');
+    assert.ok(js.includes('function switchViewMode'), 'Must have view switcher');
+    assert.ok(js.includes('function swipeCardAction'), 'Must have swipe action handler');
+  });
 });
 
 describe('LWApost Web Dataset & Compressed Archive Validation', () => {

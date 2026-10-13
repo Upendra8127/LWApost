@@ -45,6 +45,19 @@
         </div>
       </div>
 
+      <!-- View Mode Navigation (Home vs Magic Swipe) -->
+      <nav class="view-mode-nav" aria-label="View Modes">
+        <button id="viewHomeBtn" class="mode-tab-btn active" title="Home Gallery View">
+          <span class="mode-icon">🏠</span>
+          <span class="mode-label">Home</span>
+        </button>
+        <button id="viewSwipeBtn" class="mode-tab-btn magic-btn" title="Tinder & Bumble-style Interactive Card Swipe">
+          <span class="magic-sparkle">✨</span>
+          <span class="mode-label">Magic Swipe</span>
+          <span class="magic-pill">Hot</span>
+        </button>
+      </nav>
+
       <!-- Utility Controls -->
       <div class="header-actions">
         <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme" aria-label="Toggle Dark/Light Mode">
@@ -100,10 +113,15 @@
   </div>
 
   <!-- Main Content Grid -->
-  <main class="main-container">
+  <main class="main-container" id="gridMainContainer">
     <div class="grid-header">
-      <h2 id="resultsHeading">All Community Posts</h2>
-      <span class="results-count" id="resultsCount">Loading...</span>
+      <div>
+        <h2 id="resultsHeading">All Community Posts</h2>
+        <span class="results-count" id="resultsCount">Loading...</span>
+      </div>
+      <button id="gridLaunchSwipeBtn" class="launch-swipe-btn" title="Launch these posts in Tinder/Bumble Swipe Mode">
+        <span class="magic-sparkle">✨</span> Open in Magic Swipe
+      </button>
     </div>
 
     <div class="cards-grid" id="cardsGrid">
@@ -117,6 +135,122 @@
       <button class="primary-btn" id="emptyResetBtn">View All Posts</button>
     </div>
   </main>
+
+  <!-- Tinder & Bumble-Style Magic Swipe Section -->
+  <section class="swipe-mode-section" id="swipeModeSection" style="display: none;" aria-label="Magic Swipe Mode">
+    <div class="swipe-container">
+      <!-- Swipe Deck Top Header Bar -->
+      <div class="deck-topbar">
+        <div class="deck-status">
+          <button id="deckHomeBtn" class="deck-nav-btn" title="Back to Home Gallery (H / Esc)">
+            ← 🏠 Home
+          </button>
+          <div class="deck-counter-pill">
+            <span class="deck-pill-icon">🎴</span>
+            <span id="deckCounterText">Card 1 of 222</span>
+          </div>
+        </div>
+
+        <div class="deck-actions-top">
+          <button id="soundToggleBtn" class="deck-icon-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
+            <span id="soundIcon">🔊</span>
+          </button>
+          <button id="deckHelpBtn" class="deck-icon-btn" title="Swipe Guide & Keyboard Shortcuts" aria-label="Help">
+            ❓
+          </button>
+        </div>
+      </div>
+
+      <!-- The 3D Interactive Card Deck Viewport -->
+      <div class="deck-viewport">
+        <!-- Floating Stamp Indicators -->
+        <div class="deck-stamp-overlay">
+          <div class="deck-stamp stamp-like" id="stampLike">⭐ SAVE</div>
+          <div class="deck-stamp stamp-pass" id="stampPass">✕ NEXT</div>
+          <div class="deck-stamp stamp-notes" id="stampNotes">📖 NOTES</div>
+        </div>
+
+        <!-- 3D Card Stack Container -->
+        <div class="card-stack" id="cardStack">
+          <!-- Stack cards injected via JS -->
+        </div>
+
+        <!-- Empty Deck State -->
+        <div class="deck-completed" id="deckCompleted" style="display: none;">
+          <div class="completed-icon">🎉</div>
+          <h2>All Caught Up!</h2>
+          <p>You have reviewed all the community cards in this deck.</p>
+          <div class="completed-actions">
+            <button id="deckRestartBtn" class="primary-btn">🔀 Shuffle & Review Again</button>
+            <button id="deckViewSavedBtn" class="secondary-btn">⭐ View Saved Cards</button>
+            <button id="deckBackHomeBtn" class="secondary-btn">🏠 Back to Home Grid</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bumble / Tinder Action Button Dock -->
+      <div class="deck-dock">
+        <button id="dockUndoBtn" class="dock-btn dock-btn-undo" title="Rewind Previous Card (Z)" aria-label="Undo">
+          <span class="dock-icon">↺</span>
+          <span class="dock-tooltip">Undo (Z)</span>
+        </button>
+
+        <button id="dockPassBtn" class="dock-btn dock-btn-pass" title="Pass / Next Post (← Swipe Left)" aria-label="Pass">
+          <span class="dock-icon">✕</span>
+          <span class="dock-tooltip">Pass (←)</span>
+        </button>
+
+        <button id="dockShuffleBtn" class="dock-btn dock-btn-shuffle" title="CSPRNG Shuffle Deck" aria-label="Shuffle">
+          <span class="dock-icon">🔀</span>
+          <span class="dock-tooltip">Shuffle</span>
+        </button>
+
+        <button id="dockLikeBtn" class="dock-btn dock-btn-like" title="Save / Star Post (→ Swipe Right)" aria-label="Save">
+          <span class="dock-icon">⭐</span>
+          <span class="dock-tooltip">Save (→)</span>
+        </button>
+
+        <button id="dockNotesBtn" class="dock-btn dock-btn-notes" title="Lesson Notes & Text (↑ Swipe Up / Space)" aria-label="Notes">
+          <span class="dock-icon">📖</span>
+          <span class="dock-tooltip">Notes (Space)</span>
+        </button>
+      </div>
+
+      <!-- Interactive Swipe Guide Hint -->
+      <div class="deck-hint">
+        <span>👈 Drag Left to Skip</span>
+        <span class="hint-bullet">•</span>
+        <span>Tap sides for Next Slide</span>
+        <span class="hint-bullet">•</span>
+        <span>Drag Right to Save 👉</span>
+      </div>
+    </div>
+
+    <!-- Slide-up Lesson Notes Drawer inside Deck -->
+    <div class="deck-notes-drawer" id="deckNotesDrawer" aria-hidden="true">
+      <div class="drawer-backdrop" id="drawerBackdrop"></div>
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <div class="drawer-title-group">
+            <span class="badge" id="drawerPostOrder">Post #1</span>
+            <h3 id="drawerPostHeading">Lesson Notes & Context</h3>
+          </div>
+          <div class="drawer-header-actions">
+            <button id="drawerCopyBtn" class="copy-btn">📋 Copy Notes</button>
+            <button id="drawerCloseBtn" class="close-btn">✕</button>
+          </div>
+        </div>
+        <div class="drawer-body">
+          <div class="drawer-text" id="drawerPostText">No notes available.</div>
+          <div class="drawer-meta-footer">
+            <span id="drawerPostLikes">❤️ 0 likes</span>
+            <span id="drawerPostDate">Date</span>
+            <a id="drawerYtLink" href="#" target="_blank" rel="noopener noreferrer" class="link-yt">View on YouTube ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Fullscreen Interactive Card Reader Modal -->
   <div class="reader-modal" id="readerModal" aria-hidden="true" role="dialog">
@@ -202,6 +336,54 @@
       <div class="date-modal-footer">
         <button id="clearDateFilterBtn" class="secondary-btn">Clear Range</button>
         <button id="applyDateFilterBtn" class="primary-btn">Apply Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deck Help & Keyboard Shortcuts Modal -->
+  <div class="date-modal" id="deckHelpModal" aria-hidden="true">
+    <div class="date-modal-backdrop" id="deckHelpBackdrop"></div>
+    <div class="date-modal-dialog">
+      <div class="date-modal-header">
+        <h3>✨ Magic Swipe Guide & Shortcuts</h3>
+        <button id="closeDeckHelpBtn" class="close-btn">✕</button>
+      </div>
+      <div class="date-modal-body">
+        <div class="guide-grid">
+          <div class="guide-card">
+            <span class="guide-icon">👈</span>
+            <h4>Swipe Left</h4>
+            <p>Pass / Skip to next post (or press <strong>← Left Arrow</strong>)</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-icon">👉</span>
+            <h4>Swipe Right</h4>
+            <p>Save / Bookmark to favorites (or press <strong>→ Right Arrow</strong>)</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-icon">👆</span>
+            <h4>Tap Sides</h4>
+            <p>Tap left/right edge to flip cards within multi-image posts</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-icon">📖</span>
+            <h4>Lesson Notes</h4>
+            <p>Drag up, click Notes, or press <strong>Space</strong> for full text notes</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-icon">↺</span>
+            <h4>Undo / Rewind</h4>
+            <p>Press <strong>Z</strong> or click Undo to bring back previous card</p>
+          </div>
+          <div class="guide-card">
+            <span class="guide-icon">🏠</span>
+            <h4>Home Grid</h4>
+            <p>Press <strong>H</strong> or <strong>Esc</strong> to return to the Home Grid</p>
+          </div>
+        </div>
+      </div>
+      <div class="date-modal-footer">
+        <button id="gotItHelpBtn" class="primary-btn" style="width: 100%;">Got it, Let's Swipe! 🚀</button>
       </div>
     </div>
   </div>
