@@ -76,8 +76,9 @@
       <!-- Search Input -->
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search vocabulary, phrases, idioms, topics..." autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Search vocabulary, topics, idioms, post #..." autocomplete="off">
         <button id="clearSearchBtn" class="clear-btn" title="Clear Search" style="display: none;">✕</button>
+        <button id="searchBtn" class="search-submit-btn" title="Search Archive">Search</button>
       </div>
 
       <!-- Sort Dropdown -->
@@ -141,17 +142,20 @@
     <div class="swipe-container">
       <!-- Swipe Deck Top Header Bar -->
       <div class="deck-topbar">
-        <div class="deck-status">
-          <button id="deckHomeBtn" class="deck-nav-btn" title="Back to Home Gallery (H / Esc)">
-            ← 🏠 Home
-          </button>
-          <div class="deck-counter-pill">
-            <span class="deck-pill-icon">🎴</span>
-            <span id="deckCounterText">Card 1 of 222</span>
-          </div>
+        <button id="magicExitBtn" class="magic-exit-btn" title="Exit Magic Mode (Return to Normal Grid)">
+          <span class="magic-sparkle">✨</span> Exit Magic Mode
+        </button>
+        <button id="deckHomeBtn" style="display: none;">Home</button>
+
+        <div class="deck-counter-pill">
+          <span class="deck-pill-icon">🎴</span>
+          <span id="deckCounterText">Card 1 of 222</span>
         </div>
 
         <div class="deck-actions-top">
+          <button id="deckSearchToggleBtn" class="deck-icon-btn" title="Search inside deck" aria-label="Search Deck">
+            🔍
+          </button>
           <button id="soundToggleBtn" class="deck-icon-btn" title="Toggle Sound Effects" aria-label="Toggle Sound Effects">
             <span id="soundIcon">🔊</span>
           </button>
@@ -159,6 +163,13 @@
             ❓
           </button>
         </div>
+      </div>
+
+      <!-- Quick Deck Search Bar -->
+      <div class="deck-search-bar" id="deckSearchBar" style="display: none;">
+        <input type="text" id="deckSearchInput" placeholder="Search deck (e.g. hair, cooking, #61)..." autocomplete="off">
+        <button id="deckSearchSubmitBtn" class="deck-search-submit-btn">Search</button>
+        <button id="deckSearchCloseBtn" class="deck-search-close-btn" title="Close Search">✕</button>
       </div>
 
       <!-- The 3D Interactive Card Deck Viewport -->

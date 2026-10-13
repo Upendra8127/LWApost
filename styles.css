@@ -238,13 +238,36 @@ body {
 
 .clear-btn {
   position: absolute;
-  right: 0.5rem;
+  right: 5.8rem;
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.85rem;
   padding: 0.25rem;
+}
+
+.search-submit-btn {
+  margin-left: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  background: var(--accent-color);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-speed) ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-submit-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 .select-group {
@@ -1079,22 +1102,28 @@ body {
 }
 
 /* ==========================================================================
-   Tinder & Bumble-Style Magic Swipe Deck
+   Tinder & Bumble-Style Magic Swipe Deck (Immersive Focused Reader)
    ========================================================================== */
 .swipe-mode-section {
-  width: 100%;
-  min-height: calc(100vh - 70px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 1rem;
-  background: radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.12), transparent 70%),
-              radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.08), transparent 60%);
+  background: rgba(8, 12, 22, 0.94);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  overflow-y: auto;
 }
 
 .swipe-container {
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1110,27 +1139,25 @@ body {
   padding: 0 0.25rem;
 }
 
-.deck-status {
-  display: flex;
+.magic-exit-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-}
-
-.deck-nav-btn {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.4rem 0.75rem;
+  gap: 0.45rem;
+  padding: 0.45rem 1.15rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 9999px;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.45);
   transition: all var(--transition-speed) ease;
 }
 
-.deck-nav-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-color);
+.magic-exit-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.65);
 }
 
 .deck-counter-pill {
@@ -1173,10 +1200,65 @@ body {
   transform: scale(1.05);
 }
 
+/* Quick Deck Search Bar */
+.deck-search-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 0.35rem 0.6rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.deck-search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 0.35rem;
+}
+
+.deck-search-submit-btn {
+  background: var(--accent-color);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+}
+
+.deck-search-submit-btn:hover {
+  background: var(--accent-hover);
+}
+
+.deck-search-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.deck-search-close-btn:hover {
+  color: var(--text-primary);
+}
+
 /* 3D Deck Viewport */
 .deck-viewport {
   width: 100%;
-  height: 580px;
+  max-width: 440px;
+  height: 520px;
+  max-height: calc(100vh - 210px);
   position: relative;
   perspective: 1200px;
   margin: 0 auto;
@@ -1380,12 +1462,17 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #090d16;
+  overflow: hidden;
 }
 
 .card-image-box img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain; /* Complete card visible, ZERO cropping of text or graphics */
   display: block;
   pointer-events: none;
 }
@@ -1407,55 +1494,61 @@ body {
   right: 0;
 }
 
-/* Card Info Overlay (Bottom) */
+/* Card Info Overlay (Bottom) - Clean, Uncluttered, Minimal */
 .card-info-overlay {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 26;
-  padding: 1.5rem 1.15rem 1.15rem;
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.7) 65%, transparent 100%);
+  padding: 0.65rem 0.85rem;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
   color: #ffffff;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.card-text-snippet {
-  font-size: 0.88rem;
-  font-weight: 500;
-  line-height: 1.4;
-  color: #f1f5f9;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .card-action-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   font-size: 0.8rem;
   color: #cbd5e1;
 }
 
-.deck-open-notes-btn {
-  background: rgba(255, 255, 255, 0.15);
+.card-meta-pill {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  padding: 0.22rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.deck-more-info-btn {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #ffffff;
   font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.65rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
   border-radius: 9999px;
   cursor: pointer;
   transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.4);
 }
 
-.deck-open-notes-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+.deck-more-info-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.6);
 }
 
 /* Tinder & Bumble Action Button Dock */

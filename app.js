@@ -157,6 +157,7 @@ const elements = {
   resultsCount: document.getElementById('resultsCount'),
   cardsGrid: document.getElementById('cardsGrid'),
   emptyState: document.getElementById('emptyState'),
+  searchBtn: document.getElementById('searchBtn'),
   emptyResetBtn: document.getElementById('emptyResetBtn'),
   controlsWrapper: document.querySelector('.controls-wrapper'),
   gridMainContainer: document.getElementById('gridMainContainer'),
@@ -166,11 +167,17 @@ const elements = {
   gridLaunchSwipeBtn: document.getElementById('gridLaunchSwipeBtn'),
   // Magic Swipe Deck Elements
   swipeModeSection: document.getElementById('swipeModeSection'),
+  magicExitBtn: document.getElementById('magicExitBtn'),
   deckHomeBtn: document.getElementById('deckHomeBtn'),
   deckCounterText: document.getElementById('deckCounterText'),
   soundToggleBtn: document.getElementById('soundToggleBtn'),
   soundIcon: document.getElementById('soundIcon'),
   deckHelpBtn: document.getElementById('deckHelpBtn'),
+  deckSearchToggleBtn: document.getElementById('deckSearchToggleBtn'),
+  deckSearchBar: document.getElementById('deckSearchBar'),
+  deckSearchInput: document.getElementById('deckSearchInput'),
+  deckSearchSubmitBtn: document.getElementById('deckSearchSubmitBtn'),
+  deckSearchCloseBtn: document.getElementById('deckSearchCloseBtn'),
   cardStack: document.getElementById('cardStack'),
   stampLike: document.getElementById('stampLike'),
   stampPass: document.getElementById('stampPass'),
@@ -382,13 +389,23 @@ function applyFilters() {
     list = list.filter((p) => p.type === 'multi_image' && p.totalCards > 1);
   }
 
-  // 2. Search query filter
+  // 2. High-precision Multi-token and Post Order Search
   if (state.searchQuery) {
-    const q = state.searchQuery.toLowerCase();
+    const raw = state.searchQuery.trim().toLowerCase();
+    const orderNumber = raw.replace(/[^0-9]/g, '');
+    const tokens = raw.split(/\s+/).filter((t) => t.length > 0);
+
     list = list.filter((p) => {
-      const textMatch = (p.text || '').toLowerCase().includes(q);
-      const postOrderMatch = String(p.order) === q;
-      return textMatch || postOrderMatch;
+      // Direct post number match (e.g. "61", "#61", "post 61", "post #61")
+      if (orderNumber && String(p.order) === orderNumber) return true;
+
+      const text = (p.text || '').toLowerCase();
+      const time = (p.publishedTime || '').toLowerCase();
+      const type = (p.type || '').toLowerCase();
+      const cardsPath = (p.cards || []).map((c) => c.webpUrl || '').join(' ').toLowerCase();
+      const combined = `${text} ${time} ${type} post #${p.order} ${cardsPath}`;
+
+      return tokens.every((token) => combined.includes(token));
     });
   }
 
@@ -771,30 +788,41 @@ function renderDeckStack() {
   elements.cardStack.textContent = ''; // safe clear
 
   const total = state.swipeDeck.length;
-  const currentIdx = state.swipeDeckIndex;
-
-  if (elements.deckCounterText) {
-    if (currentIdx >= total) {
-      elements.deckCounterText.textContent = `Completed (${total}/${total})`;
-    } else {
-      elements.deckCounterText.textContent = `Card ${currentIdx + 1} of ${total}`;
-    }
-  }
-
-  // If all cards in deck swiped
-  if (currentIdx >= total) {
+  if (total === 0) {
     if (elements.deckCompleted) elements.deckCompleted.style.display = 'flex';
+    if (elements.deckCounterText) elements.deckCounterText.textContent = '0 cards found';
     return;
   }
 
   if (elements.deckCompleted) elements.deckCompleted.style.display = 'none';
 
-  // Render up to 3 cards in stack (Top = 0, Next = 1, Third = 2)
-  const stackSlice = state.swipeDeck.slice(currentIdx, currentIdx + 3);
+  // Continuous seamless loop so reading NEVER stops until user exits!
+  if (state.swipeDeckIndex >= total) {
+    state.swipeDeckIndex = state.swipeDeckIndex % total;
+  }
+  if (state.swipeDeckIndex < 0) {
+    state.swipeDeckIndex = (state.swipeDeckIndex + total) % total;
+  }
+
+  const currentIdx = state.swipeDeckIndex;
+  const currentPost = state.swipeDeck[currentIdx];
+
+  if (elements.deckCounterText) {
+    const numCards = (currentPost.cards || []).length;
+    const cardPart = numCards > 1 ? ` • Slide ${state.swipeSubCardIndex + 1}/${numCards}` : '';
+    elements.deckCounterText.textContent = `Post #${currentPost.order} (${currentIdx + 1}/${total})${cardPart}`;
+  }
+
+  // Render 3 cards in stack (Top = 0, Next = 1, Third = 2) with circular wrapping
+  const stackCards = [
+    state.swipeDeck[currentIdx],
+    state.swipeDeck[(currentIdx + 1) % total],
+    state.swipeDeck[(currentIdx + 2) % total],
+  ];
 
   // Append in reverse order so top card is top DOM child
-  for (let i = stackSlice.length - 1; i >= 0; i--) {
-    const post = stackSlice[i];
+  for (let i = stackCards.length - 1; i >= 0; i--) {
+    const post = stackCards[i];
     const isTop = i === 0;
     const cardEl = createSwipeCardElement(post, isTop, i);
     elements.cardStack.appendChild(cardEl);
@@ -899,30 +927,27 @@ function createSwipeCardElement(post, isTop, depthIndex) {
 
   cardEl.appendChild(imageBox);
 
-  // Bottom Info Overlay
+  // Bottom Action Bar - Clean, uncluttered, no text obscuring the visual card!
   const infoOverlay = document.createElement('div');
   infoOverlay.className = 'card-info-overlay';
-
-  const snippet = document.createElement('p');
-  snippet.className = 'card-text-snippet';
-  snippet.textContent = post.text ? post.text.slice(0, 140) : 'English Visual Study Card';
-  infoOverlay.appendChild(snippet);
 
   const actionBar = document.createElement('div');
   actionBar.className = 'card-action-bar';
 
-  const likesSpan = document.createElement('span');
-  likesSpan.textContent = `❤️ ${post.likes || '0'} • ${post.publishedTime || formatDate(post.publishedDateISO)}`;
-  actionBar.appendChild(likesSpan);
+  const metaPill = document.createElement('span');
+  metaPill.className = 'card-meta-pill';
+  metaPill.textContent = `❤️ ${post.likes || '0'} • ${post.publishedTime || formatDate(post.publishedDateISO)}`;
+  actionBar.appendChild(metaPill);
 
-  const notesBtn = document.createElement('button');
-  notesBtn.className = 'deck-open-notes-btn';
-  notesBtn.textContent = '📖 Notes';
-  notesBtn.addEventListener('click', (e) => {
+  const moreInfoBtn = document.createElement('button');
+  moreInfoBtn.className = 'deck-more-info-btn';
+  moreInfoBtn.textContent = 'ℹ️ More Info';
+  moreInfoBtn.title = 'View lesson notes & explanation';
+  moreInfoBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     openDeckNotes(post);
   });
-  actionBar.appendChild(notesBtn);
+  actionBar.appendChild(moreInfoBtn);
 
   infoOverlay.appendChild(actionBar);
   cardEl.appendChild(infoOverlay);
@@ -1023,7 +1048,8 @@ function bindCardDragPhysics(cardEl, post) {
 }
 
 function swipeCardAction(action, cardEl = null, post = null, deltaX = 0, deltaY = 0) {
-  if (state.swipeDeckIndex >= state.swipeDeck.length) return;
+  const total = state.swipeDeck.length;
+  if (total === 0) return;
 
   const currentPost = post || state.swipeDeck[state.swipeDeckIndex];
   const activeEl = cardEl || elements.cardStack?.querySelector('.swipe-card.is-top');
@@ -1060,7 +1086,8 @@ function swipeCardAction(action, cardEl = null, post = null, deltaX = 0, deltaY 
     }
   }
 
-  state.swipeDeckIndex++;
+  // Seamless continuous loop so cards never stop displaying!
+  state.swipeDeckIndex = (state.swipeDeckIndex + 1) % total;
   state.swipeSubCardIndex = 0;
 
   setTimeout(() => {
@@ -1069,10 +1096,16 @@ function swipeCardAction(action, cardEl = null, post = null, deltaX = 0, deltaY 
 }
 
 function undoSwipe() {
-  if (state.swipeHistory.length === 0) return;
-  const last = state.swipeHistory.pop();
-  state.swipeDeckIndex = last.index;
-  state.swipeSubCardIndex = last.subCardIndex || 0;
+  const total = state.swipeDeck.length;
+  if (total === 0) return;
+  if (state.swipeHistory.length > 0) {
+    const last = state.swipeHistory.pop();
+    state.swipeDeckIndex = last.index;
+    state.swipeSubCardIndex = last.subCardIndex || 0;
+  } else {
+    state.swipeDeckIndex = (state.swipeDeckIndex - 1 + total) % total;
+    state.swipeSubCardIndex = 0;
+  }
   sounds.playPop();
   renderDeckStack();
 }
@@ -1194,6 +1227,9 @@ function attachEventListeners() {
   }
 
   // Deck Top Bar Controls
+  if (elements.magicExitBtn) {
+    elements.magicExitBtn.addEventListener('click', () => switchViewMode('grid'));
+  }
   if (elements.deckHomeBtn) {
     elements.deckHomeBtn.addEventListener('click', () => switchViewMode('grid'));
   }
@@ -1211,6 +1247,58 @@ function attachEventListeners() {
   }
   if (elements.gotItHelpBtn) {
     elements.gotItHelpBtn.addEventListener('click', closeDeckHelp);
+  }
+
+  // Search Engine Helper
+  const executeSearch = (overrideQuery) => {
+    if (overrideQuery !== undefined) {
+      state.searchQuery = overrideQuery.trim();
+    } else {
+      state.searchQuery = (elements.searchInput ? elements.searchInput.value : '').trim();
+    }
+    if (elements.searchInput) elements.searchInput.value = state.searchQuery;
+    if (elements.deckSearchInput) elements.deckSearchInput.value = state.searchQuery;
+    if (elements.clearSearchBtn) {
+      elements.clearSearchBtn.style.display = state.searchQuery ? 'block' : 'none';
+    }
+    applyFilters();
+    if (state.viewMode === 'swipe') {
+      initSwipeDeck(0);
+    }
+  };
+
+  // Deck Search Controls
+  if (elements.deckSearchToggleBtn) {
+    elements.deckSearchToggleBtn.addEventListener('click', () => {
+      if (elements.deckSearchBar) {
+        const isHidden = elements.deckSearchBar.style.display === 'none';
+        elements.deckSearchBar.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden && elements.deckSearchInput) {
+          elements.deckSearchInput.focus();
+        }
+      }
+    });
+  }
+
+  if (elements.deckSearchSubmitBtn) {
+    elements.deckSearchSubmitBtn.addEventListener('click', () => {
+      executeSearch(elements.deckSearchInput?.value || '');
+    });
+  }
+
+  if (elements.deckSearchInput) {
+    elements.deckSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeSearch(elements.deckSearchInput.value);
+      }
+    });
+  }
+
+  if (elements.deckSearchCloseBtn) {
+    elements.deckSearchCloseBtn.addEventListener('click', () => {
+      if (elements.deckSearchBar) elements.deckSearchBar.style.display = 'none';
+    });
   }
 
   // Completed Deck Actions
@@ -1273,19 +1361,36 @@ function attachEventListeners() {
   // Theme toggle
   elements.themeToggleBtn.addEventListener('click', toggleTheme);
 
-  // Search input
-  elements.searchInput.addEventListener('input', (e) => {
-    state.searchQuery = e.target.value.trim();
-    elements.clearSearchBtn.style.display = state.searchQuery ? 'block' : 'none';
-    applyFilters();
-  });
+  // Search input & button
+  if (elements.searchBtn) {
+    elements.searchBtn.addEventListener('click', () => executeSearch());
+  }
 
-  elements.clearSearchBtn.addEventListener('click', () => {
-    state.searchQuery = '';
-    elements.searchInput.value = '';
-    elements.clearSearchBtn.style.display = 'none';
-    applyFilters();
-  });
+  if (elements.searchInput) {
+    elements.searchInput.addEventListener('input', (e) => {
+      state.searchQuery = e.target.value.trim();
+      if (elements.clearSearchBtn) {
+        elements.clearSearchBtn.style.display = state.searchQuery ? 'block' : 'none';
+      }
+      applyFilters();
+      if (state.viewMode === 'swipe') {
+        initSwipeDeck(0);
+      }
+    });
+
+    elements.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeSearch();
+      }
+    });
+  }
+
+  if (elements.clearSearchBtn) {
+    elements.clearSearchBtn.addEventListener('click', () => {
+      executeSearch('');
+    });
+  }
 
   // Sort dropdown
   elements.sortSelect.addEventListener('change', (e) => {
