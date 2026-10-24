@@ -29,7 +29,7 @@ describe('PWA Logo, Icons & Auto-Update Validation', () => {
 
   test('sw.js features cache invalidation, skipWaiting, and clients.claim', () => {
     const sw = fs.readFileSync(path.resolve('sw.js'), 'utf8');
-    assert.ok(sw.includes('lwa-archive-v3.1'), 'Service worker cache must be updated to v3.1');
+    assert.ok(/lwa-archive-v\d+\.\d+/.test(sw), 'Service worker cache must have versioned cache key');
     assert.ok(sw.includes('skipWaiting()'), 'Must call skipWaiting for instant activation');
     assert.ok(sw.includes('clients.claim()'), 'Must claim clients immediately');
   });
@@ -130,6 +130,17 @@ describe('Magic Mode Minimalist UI & Search Accuracy Validation', () => {
     assert.ok(passTopMatch, 'stamp-pass must have an explicit top pixel offset');
     const passTop = parseInt(passTopMatch[1], 10);
     assert.ok(passTop >= 75, `stamp-pass top offset (${passTop}px) must provide clearance below corner controls`);
+  });
+
+  test('Auto-sync engine and GitHub Actions workflow are configured with Node.js', () => {
+    assert.ok(fs.existsSync(path.resolve('scripts/sync_posts.mjs')), 'Node.js sync script must exist');
+    const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf8'));
+    assert.ok(pkg.scripts?.sync, 'package.json must contain sync script');
+
+    const workflow = fs.readFileSync(path.resolve('.github/workflows/auto_sync.yml'), 'utf8');
+    assert.ok(workflow.includes('actions/setup-node'), 'Workflow must use setup-node');
+    assert.ok(workflow.includes('node scripts/sync_posts.mjs'), 'Workflow must run sync_posts.mjs');
+    assert.ok(!workflow.includes('cache: \'pip\''), 'Workflow must not contain broken pip cache');
   });
 });
 

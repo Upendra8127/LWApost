@@ -6,6 +6,7 @@
   "main": "download_posts.py",
   "scripts": {
     "test": "node --test tests/*.test.js",
+    "sync": "node scripts/sync_posts.mjs",
     "validate": "node scripts/validate.js"
   },
   "keywords": [
