@@ -3,7 +3,7 @@
  * Tier-1 PWA Offline Support & Instant Auto-Update Architecture
  */
 
-const CACHE_NAME = 'lwa-archive-v4.1';
+const CACHE_NAME = 'lwa-archive-v4.2';
 const CORE_ASSETS = [
   './',
   './index.html',
